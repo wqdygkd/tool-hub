@@ -1,0 +1,36 @@
+{
+  "appId": "com.sessionbox.app",
+  "productName": "SessionBox",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "electron/**/*",
+    "src/**/*",
+    "extension/**/*",
+    "dist/**/*",
+    "resources/**/*",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "extension",
+      "to": "extension"
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "resources/icons/icon.ico"
+  },
+  "mac": {
+    "target": "dmg",
+    "icon": "resources/icons/icon.icns"
+  },
+  "linux": {
+    "target": "AppImage",
+    "icon": "resources/icons/icon.png"
+  },
+  "publish": {
+    "provider": "github"
+  }
+}
