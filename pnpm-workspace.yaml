@@ -1,0 +1,8 @@
+packages:
+  - .
+  - '!data/**'
+  - '!release/**'
+  - '!dist/**'
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - better-sqlite3
