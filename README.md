@@ -1,20 +1,73 @@
 # SessionBox
 
-多沙箱浏览器管理应用，基于 Electron + Vue 3 + Chrome 多实例方案。
+多功能工具平台，基于 Electron + Vue 3 + Chrome 多实例方案。
 
-## 功能
+## 架构
+
+采用单体仓库子目录架构，主仓库仅负责首页导航，各工具独立存放于 `tools/` 目录。
+
+```
+project/
+├── renderer/                 # 主应用（首页导航）
+│   ├── App.vue               # 应用 Shell
+│   ├── main.js               # Vue 入口
+│   ├── router/               # 路由配置
+│   ├── layouts/              # 页面布局
+│   ├── pages/HomePage.vue    # 主页
+│   ├── shared/               # 前端共享资源
+│   │   ├── components/       # 通用组件
+│   │   ├── composables/      # 通用组合函数
+│   │   └── styles/           # 全局样式
+│   └── config/tools.js       # 工具注册表
+│
+├── tools/                    # 工具目录
+│   └── sessionbox/           # SessionBox 工具（完全独立）
+│       ├── index.js          # 工具入口定义
+│       ├── renderer/         # 工具前端
+│       │   ├── components/
+│       │   ├── stores/
+│       │   ├── pages/
+│       │   └── shared/       # 工具前端共享
+│       ├── backend/          # 工具后端（Electron 主进程）
+│       │   ├── ipc/          # IPC 通道与处理
+│       │   ├── services/     # 服务层
+│       │   ├── store/        # 数据库
+│       │   ├── chrome/       # Chrome 检测
+│       │   ├── fingerprint/  # 指纹生成
+│       │   ├── constants/    # 常量
+│       │   └── utils/        # 工具函数
+│       ├── extension/        # 指纹伪造扩展
+│       └── assets/           # 工具资源
+│
+├── electron/                 # Electron 入口
+│   ├── main.js               # 主进程入口（加载工具 backend）
+│   └── preload.cjs           # 预加载脚本
+│
+├── shared/                   # 跨工具共享代码
+└── docs/                     # 文档
+```
+
+## 目录职责
+
+| 目录 | 职责 |
+|------|------|
+| `renderer/` | 仅首页导航，不含任何工具代码 |
+| `tools/<tool>/renderer/` | 工具前端代码 |
+| `tools/<tool>/backend/` | 工具后端代码（Electron 主进程） |
+| `tools/<tool>/index.js` | 工具定义入口（导出 id, name, route 等） |
+| `electron/` | 仅入口，加载 `tools/*/backend/` |
+| `shared/` | 跨工具共享代码（预留） |
+
+## 功能（SessionBox）
 
 - 独立 Chrome Profile 沙箱
-- 继承本地 Chrome 插件、书签与设置
-- 默认 Chrome 实例（直接使用系统 Profile，保留登录状态）
-- 指纹伪造扩展（Canvas / WebGL / Navigator / Audio / Screen / Timezone）
+- 指纹伪造扩展（Canvas / WebGL / Navigator）
 - 沙箱创建、启动、关闭、删除
-- 指纹编辑与插件管理
 
 ## 环境要求
 
 - Node.js 20+
-- [pnpm](https://pnpm.io/)（本项目使用 pnpm，请勿使用 npm）
+- pnpm（勿用 npm）
 
 ## 开发
 
@@ -23,21 +76,14 @@ pnpm install
 pnpm dev
 ```
 
-## 构建
+## 添加新工具
 
-```bash
-pnpm build
-pnpm start
-```
-
-## 打包
-
-```bash
-pnpm dist
-```
-
-GitHub Release 由 Actions 手动触发：仓库 **Actions → Release → Run workflow**，填写 tag（如 `v1.0.0`）即可构建 Win / macOS / Linux 安装包并上传到 Release。
-
-设计文档：`docs/superpowers/specs/2026-05-23-sessionbox-design.md`
-
-项目上下文（会话记忆）：`docs/context/LATEST.md`
+1. 创建 `tools/<tool>/` 目录：
+   ```
+   tools/<tool>/
+   ├── index.js        # 工具定义
+   ├── renderer/       # 前端
+   └── backend/        # 后端（可选）
+   ```
+2. 注册到 `renderer/config/tools.js`
+3. 路由添加到 `renderer/router/routes.js`

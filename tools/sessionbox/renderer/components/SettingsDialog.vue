@@ -27,8 +27,8 @@
 <script setup>
 import { reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { invokeIpc, ipcChannels } from '../composables/useIpc.js';
-import { useDialogVisible } from '../composables/useDialogVisible.js';
+import { invokeIpc, ipcChannels } from '@renderer/shared/composables/useIpc.js';
+import { useDialogVisible } from '@renderer/shared/composables/useDialogVisible.js';
 
 const props = defineProps({ modelValue: Boolean });
 const emit = defineEmits(['update:modelValue']);

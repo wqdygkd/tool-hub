@@ -20,7 +20,7 @@
 import { reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useSandboxStore } from '../stores/sandboxStore.js';
-import { useDialogVisible } from '../composables/useDialogVisible.js';
+import { useDialogVisible } from '@renderer/shared/composables/useDialogVisible.js';
 
 const props = defineProps({ modelValue: Boolean });
 const emit = defineEmits(['update:modelValue']);

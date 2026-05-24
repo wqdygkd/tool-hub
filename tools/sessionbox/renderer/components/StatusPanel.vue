@@ -57,7 +57,7 @@
 <script setup>
 import { computed } from 'vue';
 import ActionBar from './ActionBar.vue';
-import { isDefaultSandbox, formatSandboxStatus } from '@shared/constants/sandbox.js';
+import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
 
 const props = defineProps({
   sandbox: { type: Object, default: null },
@@ -71,13 +71,6 @@ const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 
 <style scoped>
 .default-alert {
-  margin-bottom: 16px;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 </style>

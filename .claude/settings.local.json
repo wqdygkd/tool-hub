@@ -10,7 +10,19 @@
       "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\ipc\\\\handlers.js\")",
       "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\services\\\\sandbox-service.js\")",
       "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\store\\\\database.js\")",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(pnpm add *)",
+      "Bash(Start-Sleep *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(pnpm dev *)",
+      "Bash(cp -r D:/project/chrome1/renderer/modules/sessionbox/components/* D:/project/chrome1/tools/sessionbox/renderer/components/)",
+      "Bash(cp -r D:/project/chrome1/renderer/modules/sessionbox/stores/* D:/project/chrome1/tools/sessionbox/renderer/stores/)",
+      "Bash(sed -i \"s|from '../../../shared/composables/|from '@renderer/shared/composables/|g\" D:/project/chrome1/tools/sessionbox/renderer/components/*.vue)",
+      "Bash(sed -i \"s|from '../../shared/composables/|from '@renderer/shared/composables/|g\" D:/project/chrome1/tools/sessionbox/renderer/components/*.vue)",
+      "Bash(sed -i \"s|from '@shared/constants/|from '@src/shared/constants/|g\" D:/project/chrome1/tools/sessionbox/renderer/components/*.vue)",
+      "PowerShell(Rename-Item *)",
+      "Bash(sed -i \"s|from '@src/constants/sandbox.js'|from '../shared/sandbox.js'|g\" D:/project/chrome1/tools/sessionbox/renderer/components/SandboxCard.vue D:/project/chrome1/tools/sessionbox/renderer/components/StatusPanel.vue)",
+      "Bash(sed -i \"s|from '@src/constants/sandbox.js'|from './shared/sandbox.js'|g\" D:/project/chrome1/tools/sessionbox/renderer/pages/SessionBox.vue)"
     ]
   }
 }

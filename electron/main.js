@@ -2,10 +2,10 @@ import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import { registerIpcHandlers } from '../src/ipc/handlers.js';
-import { getDatabase, closeDatabase } from '../src/store/database.js';
-import { getDataDirectory } from '../src/utils/path-helper.js';
-import { logger } from '../src/utils/logger.js';
+import { registerIpcHandlers } from '../tools/sessionbox/backend/ipc/handlers.js';
+import { getDatabase, closeDatabase } from '../tools/sessionbox/backend/store/database.js';
+import { getDataDirectory } from '../tools/sessionbox/backend/utils/path-helper.js';
+import { logger } from '../tools/sessionbox/backend/utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === 'development';

@@ -14,7 +14,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { isDefaultSandbox, formatSandboxStatus } from '@shared/constants/sandbox.js';
+import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
 
 const props = defineProps({
   sandbox: { type: Object, required: true },

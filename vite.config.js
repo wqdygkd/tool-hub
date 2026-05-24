@@ -11,7 +11,9 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@shared': path.join(__dirname, 'src'),
+      '@renderer': path.join(__dirname, 'renderer'),
+      '@tools': path.join(__dirname, 'tools'),
+      '@shared': path.join(__dirname, 'shared'),
     },
   },
   build: {
