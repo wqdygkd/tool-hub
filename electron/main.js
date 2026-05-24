@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { registerIpcHandlers } from '../tools/chrome-sandbox/backend/ipc/handlers.js';
+import { registerCdpInjectorHandlers } from '../tools/cdp-injector/backend/ipc/handlers.js';
+import { injectorService } from '../tools/cdp-injector/backend/services/injector-service.js';
 import { getDatabase, closeDatabase } from '../tools/chrome-sandbox/backend/store/database.js';
 import { loadDataDirectoryOverride, getDataDirectory } from '../tools/chrome-sandbox/backend/utils/path-helper.js';
 import { logger } from '../tools/chrome-sandbox/backend/utils/logger.js';
@@ -12,13 +14,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !app.isPackaged;
 
 let mainWindow = null;
+let backendInitialized = false;
 
-async function createWindow() {
+async function initializeBackend() {
+  if (backendInitialized) return;
+  backendInitialized = true;
+
   await loadDataDirectoryOverride();
   await fs.ensureDir(getDataDirectory());
   getDatabase();
   registerIpcHandlers();
+  registerCdpInjectorHandlers();
+}
 
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 900,
@@ -40,7 +49,10 @@ async function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  await initializeBackend();
+  await createWindow();
+});
 
 app.on('window-all-closed', () => {
   closeDatabase();
@@ -49,13 +61,14 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    await createWindow();
   }
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', async () => {
+  await injectorService.stopAll();
   closeDatabase();
   logger.info('Application quitting');
 });

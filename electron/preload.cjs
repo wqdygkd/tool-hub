@@ -21,14 +21,39 @@ const IPC_CHANNELS = {
   EVENT_MEMORY_UPDATE: 'sandbox:memory-update',
 };
 
-contextBridge.exposeInMainWorld('chromeSandbox', {
-  invoke(channel, ...args) {
-    return ipcRenderer.invoke(channel, ...args);
-  },
-  on(channel, callback) {
-    const listener = (_event, payload) => callback(payload);
-    ipcRenderer.on(channel, listener);
-    return () => ipcRenderer.removeListener(channel, listener);
-  },
-  channels: IPC_CHANNELS,
-});
+const CDP_IPC_CHANNELS = {
+  PROFILE_GET_ALL: 'cdp:profile-get-all',
+  PROFILE_SAVE: 'cdp:profile-save',
+  PROFILE_DELETE: 'cdp:profile-delete',
+  SCRIPT_GET_ALL: 'cdp:script-get-all',
+  SCRIPT_SAVE: 'cdp:script-save',
+  SCRIPT_DELETE: 'cdp:script-delete',
+  SELECT_EXECUTABLE: 'cdp:select-executable',
+  SELECT_SCRIPT_FILE: 'cdp:select-script-file',
+  LAUNCH: 'cdp:launch',
+  LAUNCH_BATCH: 'cdp:launch-batch',
+  STOP: 'cdp:stop',
+  STOP_ALL: 'cdp:stop-all',
+  GET_RUNNING: 'cdp:get-running',
+  REINJECT: 'cdp:reinject',
+  GET_TARGETS: 'cdp:get-targets',
+  OPEN_DEVTOOLS: 'cdp:open-devtools',
+  EVENT_STATUS_CHANGED: 'cdp:status-changed',
+};
+
+function exposeIpcApi(channels) {
+  return {
+    invoke(channel, ...args) {
+      return ipcRenderer.invoke(channel, ...args);
+    },
+    on(channel, callback) {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+    channels,
+  };
+}
+
+contextBridge.exposeInMainWorld('chromeSandbox', exposeIpcApi(IPC_CHANNELS));
+contextBridge.exposeInMainWorld('cdpInjector', exposeIpcApi(CDP_IPC_CHANNELS));

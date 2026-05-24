@@ -2,6 +2,7 @@ import HomePage from '../pages/HomePage.vue';
 import ToolLayout from '../layouts/ToolLayout.vue';
 import chromeSandbox from '@tools/chrome-sandbox/index.js';
 import idCardGenerator from '@tools/id-card-generator/index.js';
+import cdpInjector from '@tools/cdp-injector/index.js';
 
 export const routes = [
   {
@@ -15,6 +16,7 @@ export const routes = [
     component: ToolLayout,
     children: [
       chromeSandbox.route,
+      cdpInjector.route,
       idCardGenerator.route,
     ],
   },
