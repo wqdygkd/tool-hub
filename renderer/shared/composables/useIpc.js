@@ -1,7 +1,7 @@
 export function getChromeSandboxApi() {
   const api = window.chromeSandbox;
   if (!api) {
-    throw new Error('未检测到 Electron IPC，请通过 pnpm dev 或 pnpm start 启动 Chrome沙箱');
+    throw new Error('未检测到 Electron IPC，请通过 pnpm dev 或 pnpm start 启动 Tool Hub');
   }
   return api;
 }

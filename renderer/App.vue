@@ -3,7 +3,7 @@
     <header class="app-header">
       <div class="brand">
         <span class="brand-dot" />
-        <span>工具中心</span>
+        <span>Tool Hub</span>
       </div>
       <span class="subtitle">多功能工具平台</span>
     </header>

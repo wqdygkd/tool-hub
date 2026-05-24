@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <section class="hero-section">
-      <h1>工具中心</h1>
+      <h1>Tool Hub</h1>
       <p class="hero-desc">选择一个工具开始工作，或添加更多功能模块</p>
     </section>
 

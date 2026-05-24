@@ -7,7 +7,7 @@ export const routes = [
     path: '/',
     name: 'home',
     component: HomePage,
-    meta: { title: '工具中心' },
+    meta: { title: 'Tool Hub' },
   },
   {
     path: '/tools',

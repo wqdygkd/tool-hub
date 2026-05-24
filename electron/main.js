@@ -24,7 +24,7 @@ async function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 500,
-    title: 'Chrome沙箱',
+    title: 'Tool Hub',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

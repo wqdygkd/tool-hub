@@ -1,6 +1,6 @@
-# Chrome沙箱 Platform
+# Tool Hub
 
-多功能工具平台，基于 Electron + Vue 3 + Chrome 多实例方案。
+多功能工具平台（`tool-hub`），基于 Electron + Vue 3。首个工具模块 Chrome 沙箱提供多实例浏览器管理。
 
 ## 架构概览
 

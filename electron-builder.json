@@ -1,6 +1,6 @@
 {
-  "appId": "com.chrome-sandbox.app",
-  "productName": "Chrome沙箱",
+  "appId": "com.toolhub.app",
+  "productName": "Tool Hub",
   "directories": {
     "output": "release"
   },

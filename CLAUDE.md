@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Chrome沙箱 多功能工具平台的 Claude Code 项目指南。
+Tool Hub（`tool-hub`）多功能工具平台的 Claude Code 项目指南。
 
 ## 项目概述
 
