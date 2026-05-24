@@ -80,8 +80,12 @@ export function getSandboxPath(sandboxId) {
   return path.join(getSandboxesDirectory(), sandboxId);
 }
 
+export function getSandboxProfileDirectoryName(sandboxId) {
+  return sandboxId.replace(/^sandbox_/, 'sb_');
+}
+
 export function getSandboxProfilePath(sandboxId) {
-  return path.join(getSandboxPath(sandboxId), 'Default');
+  return path.join(getSandboxPath(sandboxId), getSandboxProfileDirectoryName(sandboxId));
 }
 
 export function getSandboxFingerprintExtPath(sandboxId) {

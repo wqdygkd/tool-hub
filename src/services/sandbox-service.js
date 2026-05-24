@@ -1,4 +1,3 @@
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs-extra';
 import { sandboxStore } from '../store/sandbox-store.js';
@@ -8,11 +7,13 @@ import { initSandboxUserData, repairSandboxProfile, readExtensionsFromProfile } 
 import { generateRandomFingerprint } from '../fingerprint/generator.js';
 import { prepareFingerprintExtension, updateFingerprintConfig } from '../fingerprint/config-writer.js';
 import { launchChrome } from '../chrome/launcher.js';
+import { shouldSkipDeveloperModeSetup, setupSandboxDeveloperMode } from '../chrome/developer-mode.js';
 import { killProcess, isRunning, getMemoryUsage, onProcessExit, findRunningPid } from '../chrome/process-manager.js';
 import { focusChromeWindow } from '../chrome/window-controller.js';
 import {
   getSandboxPath,
   getSandboxProfilePath,
+  getSandboxProfileDirectoryName,
   getSandboxFingerprintExtPath,
   getChromeUserDataRoot,
   getDefaultChromeProfilePath,
@@ -165,17 +166,39 @@ export const sandboxService = {
     const focused = await focusRunningSandbox(sandbox);
     if (focused) return focused;
 
-    const pid = await launchChrome({
+    const windowPosition = { x: 100, y: 100 };
+    const windowSize = { width: 1280, height: 800 };
+
+    let metadata = sandbox.metadata;
+    if (!defaultInstance && !metadata?.developerModeEnabled && await shouldSkipDeveloperModeSetup(sandbox)) {
+      metadata = { ...(metadata || {}), developerModeEnabled: true };
+    }
+
+    const { pid, debugPort } = await launchChrome({
       sandboxId,
       userDataDir: sandbox.userDataPath,
+      profileDirectory: defaultInstance ? 'Default' : getSandboxProfileDirectoryName(sandboxId),
       extensionPath: defaultInstance ? null : getSandboxFingerprintExtPath(sandboxId),
+      enableDeveloperMode: !defaultInstance && !metadata?.developerModeEnabled,
+      windowPosition,
+      windowSize,
     });
+
+    if (debugPort && await setupSandboxDeveloperMode(debugPort, {
+      x: windowPosition.x,
+      y: windowPosition.y,
+      width: windowSize.width,
+      height: windowSize.height,
+    })) {
+      metadata = { ...(metadata || {}), developerModeEnabled: true };
+    }
 
     sandbox = sandboxStore.update(sandboxId, {
       status: 'running',
       chromePid: pid,
       lastUsedAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
+      ...(metadata !== sandbox.metadata ? { metadata } : {}),
     });
 
     emit(IPC_CHANNELS.EVENT_STATUS_CHANGED, { sandboxId, status: 'running' });
