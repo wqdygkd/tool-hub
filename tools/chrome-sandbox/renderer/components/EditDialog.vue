@@ -1,18 +1,11 @@
 <template>
   <el-dialog v-model="visible" title="编辑沙箱设置" width="420px" @close="reset">
     <el-form :model="form" label-width="120px">
-      <el-form-item label="启动参数">
-        <div class="launch-options">
-          <el-checkbox v-model="form.disableSafetyChecks">禁用安全检查</el-checkbox>
-          <el-checkbox v-model="form.disableCors">禁用 CORS</el-checkbox>
-          <el-checkbox v-model="form.enableCustomArgs">自定义启动参数</el-checkbox>
-          <el-input
-            v-if="form.enableCustomArgs"
-            v-model="form.customArgs"
-            placeholder="例如：--window-size=800,600"
-            class="custom-args-input"
-          />
-        </div>
+      <el-form-item label="名称">
+        <el-input v-model="form.name" placeholder="沙箱名称" />
+      </el-form-item>
+      <el-form-item v-if="!isDefault" label="启动参数">
+        <LaunchOptionsFields :form="form" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -23,9 +16,16 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
+import LaunchOptionsFields from './LaunchOptionsFields.vue';
 import { useSandboxStore } from '../stores/sandboxStore.js';
+import { isDefaultSandbox } from '../shared/sandbox.js';
+import {
+  LAUNCH_OPTION_FORM_FIELDS,
+  buildLaunchOptionsPayload,
+  syncLaunchOptionsForm,
+} from '../shared/launchOptions.js';
 import { useDialogVisible } from '@renderer/shared/composables/useDialogVisible.js';
 
 const props = defineProps({
@@ -37,49 +37,48 @@ const emit = defineEmits(['update:modelValue']);
 const store = useSandboxStore();
 const loading = ref(false);
 const form = reactive({
-  disableSafetyChecks: false,
-  disableCors: false,
-  enableCustomArgs: false,
-  customArgs: '',
+  name: '',
+  ...LAUNCH_OPTION_FORM_FIELDS,
 });
 const visible = useDialogVisible(props, emit);
+const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 
 watch(visible, (open) => {
-  if (open && props.sandbox?.metadata?.launchOptions) {
-    const opts = props.sandbox.metadata.launchOptions;
-    form.disableSafetyChecks = opts.disableSafetyChecks || false;
-    form.disableCors = opts.disableCors || false;
-    form.enableCustomArgs = Boolean(opts.customArgs);
-    form.customArgs = opts.customArgs || '';
+  if (open && props.sandbox) {
+    loadForm(props.sandbox);
   }
 });
 
 function reset() {
-  form.disableSafetyChecks = false;
-  form.disableCors = false;
-  form.enableCustomArgs = false;
-  form.customArgs = '';
+  Object.assign(form, { name: '', ...LAUNCH_OPTION_FORM_FIELDS });
+}
+
+function loadForm(sandbox) {
+  reset();
+  form.name = sandbox.name || '';
+  syncLaunchOptionsForm(form, sandbox.metadata?.launchOptions);
 }
 
 async function save() {
   if (!props.sandbox) return;
 
+  const name = form.name.trim();
+  if (!name) {
+    ElMessage.warning('请输入沙箱名称');
+    return;
+  }
+
   loading.value = true;
   try {
-    const launchOptions = {
-      disableSafetyChecks: form.disableSafetyChecks,
-      disableCors: form.disableCors,
-      customArgs: form.enableCustomArgs ? form.customArgs.trim() : '',
-    };
+    const payload = { name };
+    if (!isDefault.value) {
+      payload.metadata = {
+        ...(props.sandbox.metadata || {}),
+        launchOptions: buildLaunchOptionsPayload(form),
+      };
+    }
 
-    const currentMetadata = props.sandbox.metadata || {};
-    await store.update(props.sandbox.id, {
-      metadata: {
-        ...currentMetadata,
-        launchOptions,
-      },
-    });
-
+    await store.update(props.sandbox.id, payload);
     ElMessage.success('设置已保存');
     visible.value = false;
     reset();
@@ -90,15 +89,3 @@ async function save() {
   }
 }
 </script>
-
-<style scoped>
-.launch-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.custom-args-input {
-  margin-top: 4px;
-}
-</style>

@@ -103,11 +103,21 @@ body {
   gap: var(--spacing-sm);
 }
 
+.sandbox-list .empty-tip {
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
 .sidebar-actions {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
+}
+
+.sidebar-actions .el-button,
+.action-bar .el-button {
+  margin-left: 0;
 }
 
 .full-width {
@@ -231,7 +241,10 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
 }
+
 
 /* Utility classes */
 .empty-tip,

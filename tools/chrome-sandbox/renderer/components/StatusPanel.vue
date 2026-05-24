@@ -3,12 +3,10 @@
     <template v-if="sandbox">
       <ActionBar
         :running="sandbox.status === 'running'"
-        :name="sandbox.name"
         :is-default="isDefault"
         @activate="$emit('activate')"
         @close="$emit('close')"
         @delete="$emit('delete')"
-        @rename="$emit('rename', $event)"
         @edit-fingerprint="$emit('edit-fingerprint')"
         @edit-settings="editSettingsVisible = true"
       />
@@ -53,7 +51,7 @@
         <p v-else class="muted">暂无指纹信息</p>
       </div>
 
-      <div v-if="hasLaunchOptions" class="section-block">
+      <div v-if="showLaunchOptions" class="section-block">
         <h3>启动参数</h3>
         <div class="launch-options-display">
           <el-tag v-if="sandbox.metadata?.launchOptions?.disableSafetyChecks" size="small" type="danger" effect="plain">
@@ -81,21 +79,19 @@ import { ref, computed } from 'vue';
 import ActionBar from './ActionBar.vue';
 import EditDialog from './EditDialog.vue';
 import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
+import { hasLaunchOptions } from '../shared/launchOptions.js';
 
 const props = defineProps({
   sandbox: { type: Object, default: null },
   fingerprint: { type: Object, default: null },
 });
 
-defineEmits(['activate', 'close', 'delete', 'rename', 'edit-fingerprint']);
+defineEmits(['activate', 'close', 'delete', 'edit-fingerprint']);
 
 const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 const editSettingsVisible = ref(false);
 
-const hasLaunchOptions = computed(() => {
-  const opts = props.sandbox?.metadata?.launchOptions;
-  return opts && (opts.disableSafetyChecks || opts.disableCors || opts.customArgs);
-});
+const showLaunchOptions = computed(() => hasLaunchOptions(props.sandbox?.metadata));
 </script>
 
 <style scoped>

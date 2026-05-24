@@ -7,7 +7,11 @@ export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
   const selectedId = ref(null);
   const fingerprint = ref(null);
 
-  const selectedSandbox = computed(() => sandboxes.value.find((s) => s.id === selectedId.value) || null);
+  const selectedSandbox = computed(() => findSandbox(selectedId.value));
+
+  function findSandbox(id) {
+    return sandboxes.value.find((s) => s.id === id) || null;
+  }
 
   async function loadAll() {
     sandboxes.value = await invokeIpc(ipcChannels().SANDBOX_GET_ALL);
@@ -49,12 +53,17 @@ export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
   }
 
   async function loadFingerprint(sandboxId) {
-    const sandbox = sandboxes.value.find((s) => s.id === sandboxId);
+    const sandbox = findSandbox(sandboxId);
     if (!sandbox?.fingerprintId) {
       fingerprint.value = null;
       return;
     }
     fingerprint.value = await invokeIpc(ipcChannels().FINGERPRINT_GET_BY_ID, sandbox.fingerprintId);
+  }
+
+  function patchMemory(sandboxId, memoryUsage) {
+    const sandbox = findSandbox(sandboxId);
+    if (sandbox) sandbox.memoryUsage = memoryUsage;
   }
 
   return {
@@ -70,5 +79,6 @@ export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
     remove,
     update,
     loadFingerprint,
+    patchMemory,
   };
 });

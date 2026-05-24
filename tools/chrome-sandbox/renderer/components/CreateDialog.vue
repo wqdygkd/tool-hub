@@ -9,17 +9,7 @@
         <span class="form-hint">开启后从默认 Chrome 复制已安装扩展（较慢、占用更多磁盘）</span>
       </el-form-item>
       <el-form-item label="启动参数">
-        <div class="launch-options">
-          <el-checkbox v-model="form.disableSafetyChecks">禁用安全检查</el-checkbox>
-          <el-checkbox v-model="form.disableCors">禁用 CORS</el-checkbox>
-          <el-checkbox v-model="form.enableCustomArgs">自定义启动参数</el-checkbox>
-          <el-input
-            v-if="form.enableCustomArgs"
-            v-model="form.customArgs"
-            placeholder="例如：--window-size=800,600"
-            class="custom-args-input"
-          />
-        </div>
+        <LaunchOptionsFields :form="form" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -32,7 +22,12 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
+import LaunchOptionsFields from './LaunchOptionsFields.vue';
 import { useSandboxStore } from '../stores/sandboxStore.js';
+import {
+  LAUNCH_OPTION_FORM_FIELDS,
+  buildLaunchOptionsPayload,
+} from '../shared/launchOptions.js';
 import { useDialogVisible } from '@renderer/shared/composables/useDialogVisible.js';
 
 const props = defineProps({ modelValue: Boolean });
@@ -43,20 +38,16 @@ const loading = ref(false);
 const form = reactive({
   name: '',
   inheritExtensions: false,
-  disableSafetyChecks: false,
-  disableCors: false,
-  enableCustomArgs: false,
-  customArgs: '',
+  ...LAUNCH_OPTION_FORM_FIELDS,
 });
 const visible = useDialogVisible(props, emit);
 
 function reset() {
-  form.name = '';
-  form.inheritExtensions = false;
-  form.disableSafetyChecks = false;
-  form.disableCors = false;
-  form.enableCustomArgs = false;
-  form.customArgs = '';
+  Object.assign(form, {
+    name: '',
+    inheritExtensions: false,
+    ...LAUNCH_OPTION_FORM_FIELDS,
+  });
 }
 
 async function submit() {
@@ -64,16 +55,13 @@ async function submit() {
     ElMessage.warning('请输入沙箱名称');
     return;
   }
+
   loading.value = true;
   try {
     await store.create({
       name: form.name.trim(),
       inheritExtensions: form.inheritExtensions,
-      launchOptions: {
-        disableSafetyChecks: form.disableSafetyChecks,
-        disableCors: form.disableCors,
-        customArgs: form.enableCustomArgs ? form.customArgs.trim() : '',
-      },
+      launchOptions: buildLaunchOptionsPayload(form),
     });
     ElMessage.success('沙箱创建成功');
     visible.value = false;
@@ -93,15 +81,5 @@ async function submit() {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   line-height: 1.4;
-}
-
-.launch-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.custom-args-input {
-  margin-top: 4px;
 }
 </style>

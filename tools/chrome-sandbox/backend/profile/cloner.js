@@ -6,17 +6,9 @@ import { logger } from '../utils/logger.js';
 
 const PROFILE_ITEMS_CORE = ['Bookmarks', 'Preferences'];
 const PROFILE_ITEM_SECURE_PREFS = 'Secure Preferences';
-const EXTENSION_PROFILE_ITEMS = [
-  'Extensions',
-  'Extension State',
-  'Local Extension Settings',
-  'Extension Scripts',
-  'Extension Rules',
-  PROFILE_ITEM_SECURE_PREFS,
-];
-const REPAIR_ITEMS = EXTENSION_PROFILE_ITEMS.filter((item) => item !== 'Extensions' && item !== PROFILE_ITEM_SECURE_PREFS);
-
-const EXTENSION_ASSET_ITEMS = ['Extensions', ...REPAIR_ITEMS];
+const EXTENSION_STATE_ITEMS = ['Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
+const EXTENSION_ASSET_ITEMS = ['Extensions', ...EXTENSION_STATE_ITEMS];
+const EXTENSION_PROFILE_ITEMS = [...EXTENSION_ASSET_ITEMS, PROFILE_ITEM_SECURE_PREFS];
 
 function getCloneItems(inheritExtensions) {
   return inheritExtensions
@@ -76,7 +68,7 @@ export async function repairSandboxProfile(
   await ensureDir(profilePath);
 
   if (inheritExtensions) {
-    for (const item of REPAIR_ITEMS) {
+    for (const item of EXTENSION_STATE_ITEMS) {
       const dest = path.join(profilePath, item);
       if (!await fs.pathExists(dest)) {
         const src = path.join(sourceProfilePath, item);
@@ -91,11 +83,10 @@ export async function repairSandboxProfile(
   }
 
   const localStatePath = path.join(sandboxPath, 'Local State');
-  if (!await fs.pathExists(localStatePath)) {
-    await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true, inheritExtensions });
-  } else {
-    await writeLocalStateProfile(sandboxPath, profileDirName, { inheritExtensions });
-  }
+  await writeLocalStateProfile(sandboxPath, profileDirName, {
+    copyFromSource: !await fs.pathExists(localStatePath),
+    inheritExtensions,
+  });
 
   await patchPreferences(profilePath, { inheritExtensions });
 }
@@ -162,10 +153,10 @@ async function patchPreferences(profilePath, { inheritExtensions = false } = {})
 
   if (!inheritExtensions) {
     const developerMode = prefs.extensions?.ui?.developer_mode;
-    prefs.extensions = {
-      settings: { enable_extensions: true },
-      ...(developerMode !== undefined ? { ui: { developer_mode: developerMode } } : {}),
-    };
+    prefs.extensions = { settings: { enable_extensions: true } };
+    if (developerMode !== undefined) {
+      prefs.extensions.ui = { developer_mode: developerMode };
+    }
   } else {
     prefs.extensions = prefs.extensions || {};
     prefs.extensions.settings = prefs.extensions.settings || {};

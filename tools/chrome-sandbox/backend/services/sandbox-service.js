@@ -7,7 +7,7 @@ import { generateRandomFingerprint } from '../fingerprint/generator.js';
 import { prepareFingerprintExtension, updateFingerprintConfig } from '../fingerprint/config-writer.js';
 import { launchChrome } from '../chrome/launcher.js';
 import { shouldSkipDeveloperModeSetup, setupSandboxDeveloperMode } from '../chrome/developer-mode.js';
-import { killProcess, isRunning, getMemoryUsage, onProcessExit, findRunningPid } from '../chrome/process-manager.js';
+import { killProcess, isRunning, queryChromeSandboxProcesses, onProcessExit, findRunningPid } from '../chrome/process-manager.js';
 import { focusChromeWindow } from '../chrome/window-controller.js';
 import {
   getSandboxPath,
@@ -23,6 +23,10 @@ import { DEFAULT_SANDBOX_ID, isDefaultSandbox, SANDBOX_COLORS } from '../constan
 import { IPC_CHANNELS } from '../ipc/channels.js';
 
 let statusEmitter = null;
+let memoryPollTimer = null;
+let memoryPollRunning = false;
+
+const MEMORY_POLL_INTERVAL_MS = 10000;
 
 export function setStatusEmitter(emitter) {
   statusEmitter = emitter;
@@ -30,6 +34,29 @@ export function setStatusEmitter(emitter) {
     emit(IPC_CHANNELS.EVENT_PROCESS_EXITED, { sandboxId });
     sandboxStore.update(sandboxId, { status: 'stopped', chromePid: null, memoryUsage: 0 });
   });
+  startMemoryPolling();
+}
+
+function startMemoryPolling() {
+  if (memoryPollTimer) clearInterval(memoryPollTimer);
+  memoryPollTimer = setInterval(async () => {
+    if (memoryPollRunning) return;
+    memoryPollRunning = true;
+    try {
+      await pollRunningSandboxMemory();
+    } catch (error) {
+      logger.warn('Memory poll failed', { error: error.message });
+    } finally {
+      memoryPollRunning = false;
+    }
+  }, MEMORY_POLL_INTERVAL_MS);
+}
+
+async function pollRunningSandboxMemory() {
+  for (const sandbox of sandboxStore.getAll()) {
+    if (sandbox.status !== 'running') continue;
+    await refreshSandboxMemory(sandbox.id);
+  }
 }
 
 function emit(channel, payload) {
@@ -37,7 +64,9 @@ function emit(channel, payload) {
 }
 
 function syncRunningState(sandbox) {
-  const running = isRunning(sandbox.id, sandbox.userDataPath);
+  const running = isRunning(sandbox.id, sandbox.userDataPath, {
+    allowProcessQuery: sandbox.status === 'running',
+  });
   const shouldUpdate = running !== (sandbox.status === 'running');
   if (!shouldUpdate) return sandbox;
 
@@ -80,11 +109,26 @@ async function focusRunningSandbox(sandbox) {
   const pid = findRunningPid(sandbox.id, sandbox.userDataPath) || sandbox.chromePid;
   if (!pid) return null;
   await focusChromeWindow(pid);
-  return sandboxStore.update(sandbox.id, {
+  sandboxStore.update(sandbox.id, {
     status: 'running',
     chromePid: pid,
     lastActiveAt: new Date().toISOString(),
   });
+  return await refreshSandboxMemory(sandbox.id);
+}
+
+async function refreshSandboxMemory(sandboxId) {
+  const sandbox = sandboxStore.getById(sandboxId);
+  if (!sandbox) return null;
+
+  const { pids, memoryMb } = await queryChromeSandboxProcesses(sandbox.userDataPath);
+  const pid = pids[0] || sandbox.chromePid;
+  const updated = sandboxStore.update(sandboxId, {
+    memoryUsage: memoryMb,
+    chromePid: pid || sandbox.chromePid,
+  });
+  emit(IPC_CHANNELS.EVENT_MEMORY_UPDATE, { sandboxId, memoryUsage: memoryMb });
+  return updated;
 }
 
 export const sandboxService = {
@@ -190,7 +234,7 @@ export const sandboxService = {
     });
 
     emit(IPC_CHANNELS.EVENT_STATUS_CHANGED, { sandboxId, status: 'running' });
-    return sandbox;
+    return await refreshSandboxMemory(sandboxId);
   },
 
   async close(sandboxId) {
@@ -234,15 +278,9 @@ export const sandboxService = {
     return sandboxStore.update(sandboxId, data);
   },
 
-  refreshStatus(sandboxId) {
-    const sandbox = sandboxStore.getById(sandboxId);
-    if (!sandbox) throw new Error('沙箱不存在');
-
-    const pid = findRunningPid(sandboxId, sandbox.userDataPath) || sandbox.chromePid;
-    const memoryUsage = getMemoryUsage(pid);
-    const updated = sandboxStore.update(sandboxId, { memoryUsage, chromePid: pid || sandbox.chromePid });
-    emit(IPC_CHANNELS.EVENT_MEMORY_UPDATE, { sandboxId, memoryUsage });
-    return updated;
+  async refreshStatus(sandboxId) {
+    if (!sandboxStore.getById(sandboxId)) throw new Error('沙箱不存在');
+    return refreshSandboxMemory(sandboxId);
   },
 };
 

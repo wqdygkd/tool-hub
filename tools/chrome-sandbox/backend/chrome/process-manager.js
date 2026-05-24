@@ -1,15 +1,153 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, execFile, execFileSync } from 'child_process';
+import { promisify } from 'util';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from '../utils/logger.js';
+
+const execFileAsync = promisify(execFile);
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WINDOWS_QUERY_SCRIPT = path.join(__dirname, 'chrome-process-query.ps1');
+const EMPTY_SNAPSHOT = Object.freeze({ pids: [], memoryMb: 0 });
+const QUERY_CACHE_MS = 8000;
 
 const processes = new Map();
 const userDataDirs = new Map();
+const queryCache = new Map();
+const inFlightQueries = new Map();
 let exitHandler = null;
 
 const GRACEFUL_TIMEOUT_MS = 10000;
+const POWERSHELL_QUERY_ARGS = (userDataDir) => [
+  '-NoProfile',
+  '-ExecutionPolicy',
+  'Bypass',
+  '-File',
+  WINDOWS_QUERY_SCRIPT,
+  '-UserDataDir',
+  userDataDir,
+];
+
+function logWindowsQueryFailure(userDataDir, error) {
+  logger.warn('Failed to query Chrome process tree on Windows', { userDataDir, error: error.message });
+}
+
+function buildUnixSnapshot(userDataDir) {
+  const pids = findUnixPidsByUserDataDir(userDataDir);
+  return {
+    pids,
+    memoryMb: pids.reduce((total, pid) => total + getMemoryUsage(pid), 0),
+  };
+}
+
+function queryWindowsChromeSync(userDataDir) {
+  const output = execFileSync(
+    'powershell.exe',
+    POWERSHELL_QUERY_ARGS(userDataDir),
+    { encoding: 'utf8', timeout: 15000, windowsHide: true },
+  ).trim();
+  const result = parseQueryOutput(output);
+  setCachedSnapshot(userDataDir, result);
+  return result;
+}
 
 export function onProcessExit(handler) {
   exitHandler = handler;
+}
+
+export function invalidateChromeProcessCache(userDataDir) {
+  if (userDataDir) {
+    queryCache.delete(userDataDir);
+  }
+}
+
+function parseQueryOutput(output) {
+  if (!output) return { ...EMPTY_SNAPSHOT };
+
+  const parsed = JSON.parse(output);
+  const pids = Array.isArray(parsed.pids) ? parsed.pids : [parsed.pids].filter(Boolean);
+  return {
+    pids: pids.map((pid) => Number(pid)).filter(Number.isFinite),
+    memoryMb: Number.isFinite(Number(parsed.memoryMb)) ? Number(parsed.memoryMb) : 0,
+  };
+}
+
+function getCachedSnapshot(userDataDir) {
+  const entry = queryCache.get(userDataDir);
+  if (entry && Date.now() - entry.at < QUERY_CACHE_MS) {
+    return entry.result;
+  }
+  return null;
+}
+
+function setCachedSnapshot(userDataDir, result) {
+  queryCache.set(userDataDir, { result, at: Date.now() });
+}
+
+function findUnixPidsByUserDataDir(userDataDir) {
+  try {
+    const output = execSync(`pgrep -f "${userDataDir}"`, { encoding: 'utf8' }).trim();
+    if (!output) return [];
+    return output.split(/\s+/).map((pid) => parseInt(pid, 10)).filter(Number.isFinite);
+  } catch {
+    return [];
+  }
+}
+
+async function runWindowsChromeQuery(userDataDir) {
+  try {
+    const { stdout } = await execFileAsync(
+      'powershell.exe',
+      POWERSHELL_QUERY_ARGS(userDataDir),
+      { encoding: 'utf8', timeout: 15000, windowsHide: true },
+    );
+    const result = parseQueryOutput(stdout.trim());
+    setCachedSnapshot(userDataDir, result);
+    return result;
+  } catch (error) {
+    logWindowsQueryFailure(userDataDir, error);
+    return { ...EMPTY_SNAPSHOT };
+  }
+}
+
+export async function queryChromeSandboxProcesses(userDataDir) {
+  if (!userDataDir) return { ...EMPTY_SNAPSHOT };
+
+  if (process.platform !== 'win32') {
+    return buildUnixSnapshot(userDataDir);
+  }
+
+  const cached = getCachedSnapshot(userDataDir);
+  if (cached) return cached;
+
+  const pending = inFlightQueries.get(userDataDir);
+  if (pending) return pending;
+
+  const query = runWindowsChromeQuery(userDataDir).finally(() => {
+    inFlightQueries.delete(userDataDir);
+  });
+
+  inFlightQueries.set(userDataDir, query);
+  return query;
+}
+
+function getChromeSandboxSnapshotSync(userDataDir) {
+  if (!userDataDir) return { ...EMPTY_SNAPSHOT };
+
+  if (process.platform !== 'win32') {
+    return buildUnixSnapshot(userDataDir);
+  }
+
+  const cached = getCachedSnapshot(userDataDir);
+  if (cached) return cached;
+
+  try {
+    return queryWindowsChromeSync(userDataDir);
+  } catch (error) {
+    logWindowsQueryFailure(userDataDir, error);
+    return { ...EMPTY_SNAPSHOT };
+  }
 }
 
 export function registerProcess(sandboxId, childProcess, userDataDir) {
@@ -21,7 +159,7 @@ export function registerProcess(sandboxId, childProcess, userDataDir) {
     processes.delete(sandboxId);
 
     const dir = userDataDirs.get(sandboxId);
-    if (dir && findPidsByUserDataDir(dir).length > 0) {
+    if (dir && getChromeSandboxSnapshotSync(dir).pids.length > 0) {
       logger.info('Chrome still running for sandbox', { sandboxId });
       return;
     }
@@ -32,36 +170,17 @@ export function registerProcess(sandboxId, childProcess, userDataDir) {
 }
 
 function findPidsByUserDataDir(userDataDir) {
-  if (!userDataDir) return [];
-
-  try {
-    if (process.platform === 'win32') {
-      const marker = userDataDir.replace(/\\/g, '\\\\');
-      const script = [
-        "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe'\"",
-        `| Where-Object { $_.CommandLine -like '*${marker}*' }`,
-        '| Select-Object -ExpandProperty ProcessId',
-      ].join(' ');
-      const output = execSync(`powershell -NoProfile -Command "${script}"`, { encoding: 'utf8' }).trim();
-      if (!output) return [];
-      return output
-        .split(/\r?\n/)
-        .map((line) => parseInt(line.trim(), 10))
-        .filter((pid) => Number.isFinite(pid));
-    }
-
-    const output = execSync(`pgrep -f "${userDataDir}"`, { encoding: 'utf8' }).trim();
-    if (!output) return [];
-    return output.split(/\s+/).map((pid) => parseInt(pid, 10)).filter(Number.isFinite);
-  } catch {
-    return [];
-  }
+  return getChromeSandboxSnapshotSync(userDataDir).pids;
 }
 
-export function isRunning(sandboxId, userDataDir) {
+export function isRunning(sandboxId, userDataDir, { allowProcessQuery = true } = {}) {
   const proc = processes.get(sandboxId);
   if (proc != null && proc.exitCode == null && !proc.killed) {
     return true;
+  }
+
+  if (!allowProcessQuery) {
+    return false;
   }
 
   const dir = userDataDir || userDataDirs.get(sandboxId);
@@ -166,6 +285,7 @@ export async function killProcess(sandboxId, userDataDir) {
 
     processes.delete(sandboxId);
     userDataDirs.delete(sandboxId);
+    invalidateChromeProcessCache(trackedDir);
     return true;
   } catch (error) {
     logger.error('Failed to kill Chrome process', { sandboxId, error: error.message });
@@ -180,7 +300,7 @@ export function getMemoryUsage(pid) {
     if (process.platform === 'win32') {
       const output = execSync(
         `powershell -NoProfile -Command "(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).WorkingSet64 / 1MB"`,
-        { encoding: 'utf8' }
+        { encoding: 'utf8' },
       ).trim();
       const value = parseFloat(output);
       return Number.isFinite(value) ? Math.round(value) : 0;
@@ -192,4 +312,8 @@ export function getMemoryUsage(pid) {
   } catch {
     return 0;
   }
+}
+
+export function getSandboxMemoryUsage(userDataDir) {
+  return getChromeSandboxSnapshotSync(userDataDir).memoryMb;
 }
