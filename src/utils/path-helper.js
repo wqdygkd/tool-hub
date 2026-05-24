@@ -56,6 +56,14 @@ export function getSandboxesDirectory() {
   return path.join(getDataDirectory(), 'sandboxes');
 }
 
+export function getSharedDirectory() {
+  return path.join(getDataDirectory(), 'shared');
+}
+
+export function getSharedFingerprintExtPath() {
+  return path.join(getSharedDirectory(), 'fingerprint_ext');
+}
+
 export function getDatabasePath() {
   return path.join(getDataDirectory(), 'config.db');
 }

@@ -122,14 +122,14 @@ export const sandboxService = {
     return sandbox ? syncRunningState(sandbox) : null;
   },
 
-  async create({ name, fingerprintData = null }) {
+  async create({ name, fingerprintData = null, inheritExtensions = false }) {
     const sandboxId = `sandbox_${uuidv4().replace(/-/g, '').slice(0, 8)}`;
     const sandboxPath = getSandboxPath(sandboxId);
     const profilePath = getSandboxProfilePath(sandboxId);
     const fingerprintExtPath = getSandboxFingerprintExtPath(sandboxId);
 
     await fs.ensureDir(sandboxPath);
-    await initSandboxUserData(sandboxPath);
+    await initSandboxUserData(sandboxPath, getDefaultChromeProfilePath(), { inheritExtensions });
 
     const fingerprint = fingerprintData || generateRandomFingerprint();
     fingerprintStore.create(fingerprint);
@@ -142,10 +142,11 @@ export const sandboxService = {
       color: SANDBOX_COLORS.sandbox,
       userDataPath: sandboxPath,
       fingerprintId: fingerprint.id,
+      metadata: { inheritExtensions: Boolean(inheritExtensions) },
     });
 
     await persistExtensionsFromProfile(sandboxId, profilePath);
-    logger.info('Sandbox created', { sandboxId, name });
+    logger.info('Sandbox created', { sandboxId, name, inheritExtensions });
     return sandbox;
   },
 

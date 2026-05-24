@@ -4,40 +4,58 @@ import { getDefaultChromeProfilePath, getChromeUserDataRoot, getSandboxProfileDi
 import { copyIfExists, ensureDir, readJsonFile, writeJsonFile } from '../utils/file-ops.js';
 import { logger } from '../utils/logger.js';
 
-const CLONE_PROFILE_ITEMS = [
-  'Extensions',
+const PROFILE_ITEMS_BASE = [
   'Bookmarks',
   'Preferences',
   'Secure Preferences',
+];
+
+const PROFILE_ITEMS_EXTENSIONS = [
+  'Extensions',
   'Extension State',
   'Local Extension Settings',
   'Extension Scripts',
   'Extension Rules',
 ];
 
+const CLONE_PROFILE_ITEMS = [...PROFILE_ITEMS_BASE, ...PROFILE_ITEMS_EXTENSIONS];
+
 const REPAIR_PROFILE_ITEMS = CLONE_PROFILE_ITEMS.filter(
   (item) => !['Bookmarks', 'Preferences', 'Extensions'].includes(item),
 );
 
-export async function cloneProfile(targetProfilePath, sourceProfilePath = getDefaultChromeProfilePath()) {
-  await ensureDir(targetProfilePath);
+function getCloneProfileItems(inheritExtensions) {
+  return inheritExtensions ? CLONE_PROFILE_ITEMS : PROFILE_ITEMS_BASE;
+}
 
-  for (const item of CLONE_PROFILE_ITEMS) {
+export async function cloneProfile(
+  targetProfilePath,
+  sourceProfilePath = getDefaultChromeProfilePath(),
+  { inheritExtensions = false } = {},
+) {
+  await ensureDir(targetProfilePath);
+  const items = getCloneProfileItems(inheritExtensions);
+
+  for (const item of items) {
     const src = path.join(sourceProfilePath, item);
     const dest = path.join(targetProfilePath, item);
     const copied = await copyIfExists(src, dest);
-    logger.info('Profile clone item', { item, copied, src, dest });
+    logger.info('Profile clone item', { item, copied, inheritExtensions, src, dest });
   }
 
   await patchPreferences(targetProfilePath);
   return targetProfilePath;
 }
 
-export async function initSandboxUserData(sandboxPath, sourceProfilePath = getDefaultChromeProfilePath()) {
+export async function initSandboxUserData(
+  sandboxPath,
+  sourceProfilePath = getDefaultChromeProfilePath(),
+  { inheritExtensions = false } = {},
+) {
   const sandboxId = path.basename(sandboxPath);
   const profileDirName = getSandboxProfileDirectoryName(sandboxId);
   const profilePath = path.join(sandboxPath, profileDirName);
-  await cloneProfile(profilePath, sourceProfilePath);
+  await cloneProfile(profilePath, sourceProfilePath, { inheritExtensions });
   await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true });
   return sandboxPath;
 }

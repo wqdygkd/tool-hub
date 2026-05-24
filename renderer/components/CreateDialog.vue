@@ -1,8 +1,12 @@
 <template>
   <el-dialog v-model="visible" title="新建沙箱" width="420px" @close="reset">
-    <el-form :model="form" label-width="80px">
+    <el-form :model="form" label-width="120px">
       <el-form-item label="名称">
         <el-input v-model="form.name" placeholder="例如：工作账号 A" />
+      </el-form-item>
+      <el-form-item label="继承扩展">
+        <el-switch v-model="form.inheritExtensions" />
+        <span class="form-hint">开启后从默认 Chrome 复制已安装扩展（较慢、占用更多磁盘）</span>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -23,11 +27,12 @@ const emit = defineEmits(['update:modelValue']);
 
 const store = useSandboxStore();
 const loading = ref(false);
-const form = reactive({ name: '' });
+const form = reactive({ name: '', inheritExtensions: false });
 const visible = useDialogVisible(props, emit);
 
 function reset() {
   form.name = '';
+  form.inheritExtensions = false;
 }
 
 async function submit() {
@@ -37,7 +42,10 @@ async function submit() {
   }
   loading.value = true;
   try {
-    await store.create({ name: form.name.trim() });
+    await store.create({
+      name: form.name.trim(),
+      inheritExtensions: form.inheritExtensions,
+    });
     ElMessage.success('沙箱创建成功');
     visible.value = false;
     reset();
@@ -48,3 +56,13 @@ async function submit() {
   }
 }
 </script>
+
+<style scoped>
+.form-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.4;
+}
+</style>
