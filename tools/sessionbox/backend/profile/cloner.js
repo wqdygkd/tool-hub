@@ -1,15 +1,33 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { getDefaultChromeProfilePath, getChromeUserDataRoot, getSandboxProfileDirectoryName } from '../utils/path-helper.js';
-import { copyIfExists, ensureDir, readJsonFile, writeJsonFile } from '../utils/file-ops.js';
+import { copyIfExists, ensureDir, readJsonFile, removeIfExists, writeJsonFile } from '../utils/file-ops.js';
 import { logger } from '../utils/logger.js';
 
-const PROFILE_ITEMS_BASE = ['Bookmarks', 'Preferences', 'Secure Preferences'];
-const PROFILE_ITEMS_EXTENSIONS = ['Extensions', 'Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
-const REPAIR_ITEMS = ['Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
+const PROFILE_ITEMS_CORE = ['Bookmarks', 'Preferences'];
+const PROFILE_ITEM_SECURE_PREFS = 'Secure Preferences';
+const EXTENSION_PROFILE_ITEMS = [
+  'Extensions',
+  'Extension State',
+  'Local Extension Settings',
+  'Extension Scripts',
+  'Extension Rules',
+  PROFILE_ITEM_SECURE_PREFS,
+];
+const REPAIR_ITEMS = EXTENSION_PROFILE_ITEMS.filter((item) => item !== 'Extensions' && item !== PROFILE_ITEM_SECURE_PREFS);
+
+const EXTENSION_ASSET_ITEMS = ['Extensions', ...REPAIR_ITEMS];
 
 function getCloneItems(inheritExtensions) {
-  return inheritExtensions ? [...PROFILE_ITEMS_BASE, ...PROFILE_ITEMS_EXTENSIONS] : PROFILE_ITEMS_BASE;
+  return inheritExtensions
+    ? [...PROFILE_ITEMS_CORE, PROFILE_ITEM_SECURE_PREFS, ...EXTENSION_ASSET_ITEMS]
+    : PROFILE_ITEMS_CORE;
+}
+
+async function removeExtensionProfileData(profilePath) {
+  for (const item of EXTENSION_PROFILE_ITEMS) {
+    await removeIfExists(path.join(profilePath, item));
+  }
 }
 
 export async function cloneProfile(
@@ -27,7 +45,10 @@ export async function cloneProfile(
     logger.info('Profile clone item', { item, copied, inheritExtensions, src, dest });
   }
 
-  await patchPreferences(targetProfilePath);
+  await patchPreferences(targetProfilePath, { inheritExtensions });
+  if (!inheritExtensions) {
+    await removeExtensionProfileData(targetProfilePath);
+  }
   return targetProfilePath;
 }
 
@@ -40,35 +61,43 @@ export async function initSandboxUserData(
   const profileDirName = getSandboxProfileDirectoryName(sandboxId);
   const profilePath = path.join(sandboxPath, profileDirName);
   await cloneProfile(profilePath, sourceProfilePath, { inheritExtensions });
-  await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true });
+  await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true, inheritExtensions });
   return sandboxPath;
 }
 
-export async function repairSandboxProfile(sandboxPath, sourceProfilePath = getDefaultChromeProfilePath()) {
+export async function repairSandboxProfile(
+  sandboxPath,
+  sourceProfilePath = getDefaultChromeProfilePath(),
+  { inheritExtensions = false } = {},
+) {
   const sandboxId = path.basename(sandboxPath);
   const profileDirName = getSandboxProfileDirectoryName(sandboxId);
   const profilePath = await ensureSandboxProfilePath(sandboxPath, profileDirName);
   await ensureDir(profilePath);
 
-  for (const item of REPAIR_ITEMS) {
-    const dest = path.join(profilePath, item);
-    if (!await fs.pathExists(dest)) {
-      const src = path.join(sourceProfilePath, item);
-      const copied = await copyIfExists(src, dest);
-      if (copied) {
-        logger.info('Profile repair item', { item, src, dest });
+  if (inheritExtensions) {
+    for (const item of REPAIR_ITEMS) {
+      const dest = path.join(profilePath, item);
+      if (!await fs.pathExists(dest)) {
+        const src = path.join(sourceProfilePath, item);
+        const copied = await copyIfExists(src, dest);
+        if (copied) {
+          logger.info('Profile repair item', { item, src, dest });
+        }
       }
     }
+  } else {
+    await removeExtensionProfileData(profilePath);
   }
 
   const localStatePath = path.join(sandboxPath, 'Local State');
   if (!await fs.pathExists(localStatePath)) {
-    await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true });
+    await writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource: true, inheritExtensions });
   } else {
-    await writeLocalStateProfile(sandboxPath, profileDirName);
+    await writeLocalStateProfile(sandboxPath, profileDirName, { inheritExtensions });
   }
 
-  await patchPreferences(profilePath);
+  await patchPreferences(profilePath, { inheritExtensions });
 }
 
 async function ensureSandboxProfilePath(sandboxPath, profileDirName) {
@@ -96,7 +125,16 @@ function applySandboxProfileMeta(localState, profileDirName) {
   localState.profile.profiles_order = [profileDirName];
 }
 
-async function writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSource = false } = {}) {
+function stripLocalStateExtensions(localState) {
+  delete localState.extensions;
+  delete localState.updateclientdata;
+}
+
+async function writeLocalStateProfile(
+  sandboxPath,
+  profileDirName,
+  { copyFromSource = false, inheritExtensions = false } = {},
+) {
   const destLocalState = path.join(sandboxPath, 'Local State');
 
   if (copyFromSource) {
@@ -108,23 +146,34 @@ async function writeLocalStateProfile(sandboxPath, profileDirName, { copyFromSou
 
   const localState = await readJsonFile(destLocalState, {});
   applySandboxProfileMeta(localState, profileDirName);
+  if (!inheritExtensions) {
+    stripLocalStateExtensions(localState);
+  }
   await writeJsonFile(destLocalState, localState);
-  logger.info('Local State updated for sandbox profile', { profileDirName, destLocalState });
+  logger.info('Local State updated for sandbox profile', { profileDirName, destLocalState, inheritExtensions });
 }
 
-async function patchPreferences(profilePath) {
+async function patchPreferences(profilePath, { inheritExtensions = false } = {}) {
   const prefsPath = path.join(profilePath, 'Preferences');
   const prefs = await readJsonFile(prefsPath, {});
 
   prefs.session = prefs.session || {};
   prefs.session.restore_on_startup = 1;
 
-  prefs.extensions = prefs.extensions || {};
-  prefs.extensions.settings = prefs.extensions.settings || {};
-  prefs.extensions.settings.enable_extensions = true;
+  if (!inheritExtensions) {
+    const developerMode = prefs.extensions?.ui?.developer_mode;
+    prefs.extensions = {
+      settings: { enable_extensions: true },
+      ...(developerMode !== undefined ? { ui: { developer_mode: developerMode } } : {}),
+    };
+  } else {
+    prefs.extensions = prefs.extensions || {};
+    prefs.extensions.settings = prefs.extensions.settings || {};
+    prefs.extensions.settings.enable_extensions = true;
+  }
 
   await writeJsonFile(prefsPath, prefs);
-  logger.info('Preferences patched for session restore and extensions', { prefsPath });
+  logger.info('Preferences patched for session restore and extensions', { prefsPath, inheritExtensions });
 }
 
 export async function readExtensionsFromProfile(profilePath) {

@@ -1,7 +1,7 @@
 {
-  "name": "sessionbox",
+  "name": "sessionbox-platform",
   "version": "1.0.0",
-  "description": "多沙箱浏览器管理应用 - Chrome 多实例 + 指纹伪造",
+  "description": "多功能工具平台 - Electron + Vue 3，首个工具 SessionBox 提供多沙箱浏览器管理",
   "main": "electron/main.js",
   "type": "module",
   "packageManager": "pnpm@10.6.3",
@@ -17,7 +17,8 @@
     "electron",
     "chrome",
     "sandbox",
-    "fingerprint"
+    "fingerprint",
+    "multi-tool"
   ],
   "author": "",
   "license": "MIT",

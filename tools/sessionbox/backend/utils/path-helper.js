@@ -1,12 +1,16 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { app } from 'electron';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const APP_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
-const DATA_DIR = path.join(APP_ROOT, 'data');
-const EXTENSION_DIR = path.join(APP_ROOT, 'tools', 'sessionbox', 'extension');
+// Use app.isPackaged for reliable detection (NODE_ENV may not be set in packaged apps)
+const isDev = !app.isPackaged;
+
+// In development: resolve from source directory
+// In production: use electron app paths
+const APP_ROOT_DEV = path.resolve(__dirname, '..', '..', '..', '..');
 
 function getChromePaths() {
   const home = os.homedir();
@@ -40,23 +44,30 @@ function getChromePaths() {
 }
 
 export function getAppRoot() {
-  return APP_ROOT;
+  return isDev ? APP_ROOT_DEV : app.getAppPath();
 }
 
 export function getDataDirectory() {
-  return DATA_DIR;
+  // Data should always be in user's app data folder (persist across updates)
+  return isDev
+    ? path.join(APP_ROOT_DEV, 'data')
+    : path.join(app.getPath('userData'), 'data');
 }
 
 export function getSandboxesDirectory() {
-  return path.join(DATA_DIR, 'sandboxes');
+  return path.join(getDataDirectory(), 'sandboxes');
 }
 
 export function getDatabasePath() {
-  return path.join(DATA_DIR, 'config.db');
+  return path.join(getDataDirectory(), 'config.db');
 }
 
 export function getExtensionTemplatePath() {
-  return EXTENSION_DIR;
+  // In dev: source directory
+  // In prod: extraResources copied to resources/extension/
+  return isDev
+    ? path.join(APP_ROOT_DEV, 'tools', 'sessionbox', 'extension')
+    : path.join(process.resourcesPath, 'extension');
 }
 
 export function getDefaultChromeProfilePath() {
@@ -88,5 +99,5 @@ export function getSandboxFingerprintExtPath(sandboxId) {
 }
 
 export function getSharedFingerprintExtPath() {
-  return path.join(DATA_DIR, 'shared', 'fingerprint_ext');
+  return path.join(getDataDirectory(), 'shared', 'fingerprint_ext');
 }

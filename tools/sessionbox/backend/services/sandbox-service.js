@@ -101,7 +101,7 @@ export const sandboxService = {
     return sandbox ? syncRunningState(sandbox) : null;
   },
 
-  async create({ name, fingerprintData = null, inheritExtensions = false }) {
+  async create({ name, fingerprintData = null, inheritExtensions = false, launchOptions = {} }) {
     const sandboxId = `sandbox_${uuidv4().replace(/-/g, '').slice(0, 8)}`;
     const sandboxPath = getSandboxPath(sandboxId);
     const profilePath = getSandboxProfilePath(sandboxId);
@@ -121,10 +121,17 @@ export const sandboxService = {
       color: SANDBOX_COLORS.sandbox,
       userDataPath: sandboxPath,
       fingerprintId: fingerprint.id,
-      metadata: { inheritExtensions: Boolean(inheritExtensions) },
+      metadata: {
+        inheritExtensions: Boolean(inheritExtensions),
+        launchOptions: {
+          disableSafetyChecks: Boolean(launchOptions.disableSafetyChecks),
+          disableCors: Boolean(launchOptions.disableCors),
+          customArgs: launchOptions.customArgs || '',
+        },
+      },
     });
 
-    logger.info('Sandbox created', { sandboxId, name, inheritExtensions });
+    logger.info('Sandbox created', { sandboxId, name, inheritExtensions, launchOptions });
     return sandbox;
   },
 
@@ -139,7 +146,8 @@ export const sandboxService = {
     }
 
     if (!defaultInstance) {
-      await repairSandboxProfile(sandbox.userDataPath);
+      const inheritExtensions = Boolean(sandbox.metadata?.inheritExtensions);
+      await repairSandboxProfile(sandbox.userDataPath, undefined, { inheritExtensions });
     }
 
     const focused = await focusRunningSandbox(sandbox);
@@ -161,6 +169,7 @@ export const sandboxService = {
       enableDeveloperMode: !defaultInstance && !metadata?.developerModeEnabled,
       windowPosition,
       windowSize,
+      launchOptions: metadata?.launchOptions || {},
     });
 
     if (debugPort && await setupSandboxDeveloperMode(debugPort, {

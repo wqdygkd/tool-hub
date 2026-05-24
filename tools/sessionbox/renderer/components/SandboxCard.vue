@@ -9,6 +9,17 @@
       <span class="status" :class="sandbox.status">{{ formatSandboxStatus(sandbox.status) }}</span>
       <span v-if="sandbox.status === 'running'" class="pid">PID: {{ sandbox.chromePid || '-' }}</span>
     </div>
+    <div v-if="hasLaunchOptions" class="launch-options-tags">
+      <el-tag v-if="sandbox.metadata?.launchOptions?.disableSafetyChecks" size="small" type="danger" effect="plain">
+        禁用安全检查
+      </el-tag>
+      <el-tag v-if="sandbox.metadata?.launchOptions?.disableCors" size="small" type="danger" effect="plain">
+        禁用 CORS
+      </el-tag>
+      <el-tag v-if="sandbox.metadata?.launchOptions?.customArgs" size="small" type="info" effect="plain">
+        自定义参数
+      </el-tag>
+    </div>
   </div>
 </template>
 
@@ -24,6 +35,11 @@ const props = defineProps({
 defineEmits(['click']);
 
 const isDefault = computed(() => isDefaultSandbox(props.sandbox));
+
+const hasLaunchOptions = computed(() => {
+  const opts = props.sandbox.metadata?.launchOptions;
+  return opts && (opts.disableSafetyChecks || opts.disableCors || opts.customArgs);
+});
 </script>
 
 <style scoped>
@@ -47,5 +63,12 @@ const isDefault = computed(() => isDefaultSandbox(props.sandbox));
   white-space: nowrap;
   font-weight: 600;
   font-size: 14px;
+}
+
+.launch-options-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 </style>

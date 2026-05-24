@@ -6,15 +6,14 @@
   },
   "files": [
     "electron/**/*",
-    "src/**/*",
-    "extension/**/*",
+    "tools/**/*",
     "dist/**/*",
-    "resources/**/*",
+    "shared/**/*",
     "package.json"
   ],
   "extraResources": [
     {
-      "from": "extension",
+      "from": "tools/sessionbox/extension",
       "to": "extension"
     }
   ],

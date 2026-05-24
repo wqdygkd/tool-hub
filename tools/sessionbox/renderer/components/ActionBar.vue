@@ -5,6 +5,7 @@
     </el-button>
     <el-button :disabled="!running" @click="$emit('close')">关闭</el-button>
     <el-button @click="rename">重命名</el-button>
+    <el-button v-if="!isDefault" @click="$emit('edit-settings')">编辑设置</el-button>
     <el-button v-if="!isDefault" @click="$emit('edit-fingerprint')">编辑指纹</el-button>
     <el-button v-if="!isDefault" type="danger" plain @click="confirmDelete">删除</el-button>
   </div>
@@ -20,7 +21,7 @@ const props = defineProps({
   isDefault: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['activate', 'close', 'delete', 'edit-fingerprint', 'rename']);
+const emit = defineEmits(['activate', 'close', 'delete', 'edit-fingerprint', 'edit-settings', 'rename']);
 
 const activateLabel = computed(() => {
   if (props.running) return '激活窗口';

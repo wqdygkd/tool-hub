@@ -22,7 +22,12 @@
       "Bash(sed -i \"s|from '@shared/constants/|from '@src/shared/constants/|g\" D:/project/chrome1/tools/sessionbox/renderer/components/*.vue)",
       "PowerShell(Rename-Item *)",
       "Bash(sed -i \"s|from '@src/constants/sandbox.js'|from '../shared/sandbox.js'|g\" D:/project/chrome1/tools/sessionbox/renderer/components/SandboxCard.vue D:/project/chrome1/tools/sessionbox/renderer/components/StatusPanel.vue)",
-      "Bash(sed -i \"s|from '@src/constants/sandbox.js'|from './shared/sandbox.js'|g\" D:/project/chrome1/tools/sessionbox/renderer/pages/SessionBox.vue)"
+      "Bash(sed -i \"s|from '@src/constants/sandbox.js'|from './shared/sandbox.js'|g\" D:/project/chrome1/tools/sessionbox/renderer/pages/SessionBox.vue)",
+      "Bash(pnpm run *)",
+      "PowerShell(taskkill *)",
+      "Bash(D:/project/chrome1/release/win-unpacked/SessionBox.exe *)",
+      "Bash(netstat -ano)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }

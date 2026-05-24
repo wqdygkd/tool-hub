@@ -10,6 +10,12 @@
         @delete="$emit('delete')"
         @rename="$emit('rename', $event)"
         @edit-fingerprint="$emit('edit-fingerprint')"
+        @edit-settings="editSettingsVisible = true"
+      />
+
+      <EditDialog
+        v-model="editSettingsVisible"
+        :sandbox="sandbox"
       />
 
       <div class="panel-header">
@@ -46,6 +52,22 @@
         </div>
         <p v-else class="muted">暂无指纹信息</p>
       </div>
+
+      <div v-if="hasLaunchOptions" class="section-block">
+        <h3>启动参数</h3>
+        <div class="launch-options-display">
+          <el-tag v-if="sandbox.metadata?.launchOptions?.disableSafetyChecks" size="small" type="danger" effect="plain">
+            禁用安全检查
+          </el-tag>
+          <el-tag v-if="sandbox.metadata?.launchOptions?.disableCors" size="small" type="danger" effect="plain">
+            禁用 CORS
+          </el-tag>
+          <div v-if="sandbox.metadata?.launchOptions?.customArgs" class="custom-args">
+            <span class="label">自定义参数:</span>
+            <code>{{ sandbox.metadata?.launchOptions?.customArgs }}</code>
+          </div>
+        </div>
+      </div>
     </template>
 
     <div v-else class="empty-panel">
@@ -55,8 +77,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import ActionBar from './ActionBar.vue';
+import EditDialog from './EditDialog.vue';
 import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
 
 const props = defineProps({
@@ -67,10 +90,40 @@ const props = defineProps({
 defineEmits(['activate', 'close', 'delete', 'rename', 'edit-fingerprint']);
 
 const isDefault = computed(() => isDefaultSandbox(props.sandbox));
+const editSettingsVisible = ref(false);
+
+const hasLaunchOptions = computed(() => {
+  const opts = props.sandbox?.metadata?.launchOptions;
+  return opts && (opts.disableSafetyChecks || opts.disableCors || opts.customArgs);
+});
 </script>
 
 <style scoped>
 .default-alert {
   margin-bottom: var(--spacing-lg);
+}
+
+.launch-options-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-args {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.custom-args .label {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+}
+
+.custom-args code {
+  background: var(--el-fill-color-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 </style>

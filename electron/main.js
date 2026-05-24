@@ -8,7 +8,8 @@ import { getDataDirectory } from '../tools/sessionbox/backend/utils/path-helper.
 import { logger } from '../tools/sessionbox/backend/utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isDev = process.env.NODE_ENV === 'development';
+// Use app.isPackaged for reliable detection (NODE_ENV may not be set in packaged apps)
+const isDev = !app.isPackaged;
 
 let mainWindow = null;
 
@@ -18,8 +19,8 @@ async function createWindow() {
   registerIpcHandlers();
 
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 600,
+    width: 1200,
+    height: 900,
     minWidth: 800,
     minHeight: 500,
     title: 'SessionBox',

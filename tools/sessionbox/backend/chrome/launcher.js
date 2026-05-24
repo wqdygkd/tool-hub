@@ -12,6 +12,7 @@ export async function launchChrome({
   windowPosition = { x: 100, y: 100 },
   windowSize = { width: 1280, height: 800 },
   enableDeveloperMode = false,
+  launchOptions = {},
 }) {
   const chromePath = await detectChromePath();
   const debugPort = enableDeveloperMode ? await getFreePort() : null;
@@ -38,7 +39,28 @@ export async function launchChrome({
     args.push(`--load-extension=${extensionPath}`);
   }
 
-  logger.info('Launching Chrome', { sandboxId, chromePath, userDataDir, profileDirectory, debugPort });
+  // Safety checks disabled
+  if (launchOptions.disableSafetyChecks) {
+    args.push('--disable-web-security');
+    args.push('--ignore-certificate-errors');
+    args.push('--disable-features=IsolateOrigins,site-per-process');
+  }
+
+  // CORS disabled
+  if (launchOptions.disableCors) {
+    args.push('--disable-web-security');
+  }
+
+  // Custom arguments
+  if (launchOptions.customArgs) {
+    const customArgsList = launchOptions.customArgs
+      .split(' ')
+      .map(arg => arg.trim())
+      .filter(arg => arg.length > 0);
+    args.push(...customArgsList);
+  }
+
+  logger.info('Launching Chrome', { sandboxId, chromePath, userDataDir, profileDirectory, debugPort, launchOptions });
 
   const child = spawn(chromePath, args, {
     detached: false,
