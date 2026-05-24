@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// Keep in sync with src/ipc/channels.js (preload sandbox cannot require local files)
+// Auto-synced from src/ipc/channels.js by scripts/sync-ipc-channels.js
 const IPC_CHANNELS = {
   SANDBOX_CREATE: 'sandbox:create',
   SANDBOX_DELETE: 'sandbox:delete',
@@ -12,8 +12,6 @@ const IPC_CHANNELS = {
   FINGERPRINT_UPDATE: 'fingerprint:update',
   FINGERPRINT_GET_BY_ID: 'fingerprint:get-by-id',
   FINGERPRINT_GENERATE_RANDOM: 'fingerprint:generate-random',
-  EXTENSION_GET_ALL: 'extension:get-all',
-  EXTENSION_TOGGLE: 'extension:toggle',
   CHROME_DETECT_PATH: 'chrome:detect-path',
   CONFIG_GET: 'config:get',
   CONFIG_UPDATE: 'config:update',

@@ -44,16 +44,6 @@ CREATE TABLE IF NOT EXISTS fingerprints (
     updated_at DATETIME
 );
 
-CREATE TABLE IF NOT EXISTS extensions (
-    id TEXT PRIMARY KEY,
-    sandbox_id TEXT NOT NULL,
-    extension_id TEXT NOT NULL,
-    extension_name TEXT,
-    extension_path TEXT,
-    enabled INTEGER DEFAULT 1,
-    FOREIGN KEY (sandbox_id) REFERENCES sandboxes(id) ON DELETE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS global_config (
     key TEXT PRIMARY KEY,
     value TEXT,
@@ -61,7 +51,6 @@ CREATE TABLE IF NOT EXISTS global_config (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sandboxes_status ON sandboxes(status);
-CREATE INDEX IF NOT EXISTS idx_extensions_sandbox ON extensions(sandbox_id);
 `;
 
 let db = null;

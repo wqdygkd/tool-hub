@@ -1,4 +1,4 @@
-// Keep in sync with electron/preload.cjs (preload sandbox cannot require local files)
+// Auto-synced to electron/preload.cjs via scripts/sync-ipc-channels.js
 export const IPC_CHANNELS = {
   SANDBOX_CREATE: 'sandbox:create',
   SANDBOX_DELETE: 'sandbox:delete',
@@ -10,8 +10,6 @@ export const IPC_CHANNELS = {
   FINGERPRINT_UPDATE: 'fingerprint:update',
   FINGERPRINT_GET_BY_ID: 'fingerprint:get-by-id',
   FINGERPRINT_GENERATE_RANDOM: 'fingerprint:generate-random',
-  EXTENSION_GET_ALL: 'extension:get-all',
-  EXTENSION_TOGGLE: 'extension:toggle',
   CHROME_DETECT_PATH: 'chrome:detect-path',
   CONFIG_GET: 'config:get',
   CONFIG_UPDATE: 'config:update',

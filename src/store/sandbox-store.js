@@ -1,6 +1,19 @@
 import { getDatabase } from './database.js';
 import { SANDBOX_COLORS } from '../constants/sandbox.js';
 
+const FIELD_MAP = {
+  name: 'name',
+  category: 'category',
+  color: 'color',
+  userDataPath: 'user_data_path',
+  chromePid: 'chrome_pid',
+  status: 'status',
+  fingerprintId: 'fingerprint_id',
+  memoryUsage: 'memory_usage',
+  lastUsedAt: 'last_used_at',
+  lastActiveAt: 'last_active_at',
+};
+
 function mapRow(row) {
   if (!row) return null;
   return {
@@ -51,22 +64,9 @@ export const sandboxStore = {
     const fields = [];
     const params = { id };
 
-    const mapping = {
-      name: 'name',
-      category: 'category',
-      color: 'color',
-      userDataPath: 'user_data_path',
-      chromePid: 'chrome_pid',
-      status: 'status',
-      fingerprintId: 'fingerprint_id',
-      memoryUsage: 'memory_usage',
-      lastUsedAt: 'last_used_at',
-      lastActiveAt: 'last_active_at',
-    };
-
-    for (const [key, column] of Object.entries(mapping)) {
+    for (const [key, col] of Object.entries(FIELD_MAP)) {
       if (data[key] !== undefined) {
-        fields.push(`${column} = @${key}`);
+        fields.push(`${col} = @${key}`);
         params[key] = data[key];
       }
     }
@@ -77,7 +77,6 @@ export const sandboxStore = {
     }
 
     if (fields.length === 0) return this.getById(id);
-
     getDatabase().prepare(`UPDATE sandboxes SET ${fields.join(', ')} WHERE id = @id`).run(params);
     return this.getById(id);
   },

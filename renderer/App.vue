@@ -19,13 +19,11 @@
       <StatusPanel
         :sandbox="selectedSandbox"
         :fingerprint="fingerprint"
-        :extensions="extensions"
         @activate="store.activate(selectedId)"
         @close="store.close(selectedId)"
         @delete="deleteSandbox"
         @rename="renameSandbox"
         @edit-fingerprint="openFingerprintEditor"
-        @manage-extensions="showExtensions = true"
       />
     </main>
 
@@ -43,12 +41,6 @@
       :sandbox-id="selectedId"
       @saved="store.loadFingerprint(selectedId)"
     />
-    <ExtensionManager
-      v-model="showExtensions"
-      :sandbox-id="selectedId"
-      :extensions="extensions"
-      @refresh="store.loadExtensions(selectedId)"
-    />
   </div>
 </template>
 
@@ -60,7 +52,6 @@ import StatusPanel from './components/StatusPanel.vue';
 import CreateDialog from './components/CreateDialog.vue';
 import SettingsDialog from './components/SettingsDialog.vue';
 import FingerprintEditor from './components/FingerprintEditor.vue';
-import ExtensionManager from './components/ExtensionManager.vue';
 import { useSandboxStore } from './stores/sandboxStore.js';
 import { isDefaultSandbox } from '@shared/constants/sandbox.js';
 import { ipcChannels, onIpc } from './composables/useIpc.js';
@@ -69,13 +60,11 @@ const store = useSandboxStore();
 const showCreate = ref(false);
 const showSettings = ref(false);
 const showFingerprint = ref(false);
-const showExtensions = ref(false);
 
 const sandboxes = computed(() => store.sandboxes);
 const selectedId = computed(() => store.selectedId);
 const selectedSandbox = computed(() => store.selectedSandbox);
 const fingerprint = computed(() => store.fingerprint);
-const extensions = computed(() => store.extensions);
 const runningCount = computed(() => sandboxes.value.filter((s) => s.status === 'running').length);
 const totalMemory = computed(() => sandboxes.value.reduce((sum, s) => sum + (s.memoryUsage || 0), 0));
 
@@ -109,7 +98,6 @@ async function renameSandbox(name) {
 watch(selectedId, (id) => {
   if (id) {
     store.loadFingerprint(id);
-    store.loadExtensions(id);
   }
 });
 

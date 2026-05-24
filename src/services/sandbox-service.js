@@ -2,8 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs-extra';
 import { sandboxStore } from '../store/sandbox-store.js';
 import { fingerprintStore } from '../store/fingerprint-store.js';
-import { extensionStore } from '../store/extension-store.js';
-import { initSandboxUserData, repairSandboxProfile, readExtensionsFromProfile } from '../profile/cloner.js';
+import { initSandboxUserData, repairSandboxProfile } from '../profile/cloner.js';
 import { generateRandomFingerprint } from '../fingerprint/generator.js';
 import { prepareFingerprintExtension, updateFingerprintConfig } from '../fingerprint/config-writer.js';
 import { launchChrome } from '../chrome/launcher.js';
@@ -39,53 +38,33 @@ function emit(channel, payload) {
 
 function syncRunningState(sandbox) {
   const running = isRunning(sandbox.id, sandbox.userDataPath);
-  if (running && sandbox.status !== 'running') {
-    return sandboxStore.update(sandbox.id, { status: 'running' });
-  }
-  if (!running && sandbox.status === 'running') {
-    emit(IPC_CHANNELS.EVENT_PROCESS_EXITED, { sandboxId: sandbox.id });
-    return sandboxStore.update(sandbox.id, { status: 'stopped', chromePid: null, memoryUsage: 0 });
-  }
-  return sandbox;
-}
+  const shouldUpdate = running !== (sandbox.status === 'running');
+  if (!shouldUpdate) return sandbox;
 
-async function persistExtensionsFromProfile(sandboxId, profilePath) {
-  const extensions = await readExtensionsFromProfile(profilePath);
-  for (const ext of extensions) {
-    extensionStore.upsert({
-      id: `${sandboxId}_${ext.extensionId}`,
-      sandboxId,
-      extensionId: ext.extensionId,
-      extensionName: ext.extensionName,
-      extensionPath: ext.extensionPath,
-      enabled: true,
-    });
-  }
+  const newStatus = running ? 'running' : 'stopped';
+  if (!running) emit(IPC_CHANNELS.EVENT_PROCESS_EXITED, { sandboxId: sandbox.id });
+  return sandboxStore.update(sandbox.id, { status: newStatus, chromePid: running ? sandbox.chromePid : null, memoryUsage: running ? sandbox.memoryUsage : 0 });
 }
 
 async function ensureDefaultSandbox() {
   const userDataPath = getChromeUserDataRoot();
-  let sandbox = sandboxStore.getById(DEFAULT_SANDBOX_ID);
+  const existing = sandboxStore.getById(DEFAULT_SANDBOX_ID);
 
-  if (!sandbox) {
-    sandbox = sandboxStore.create({
-      id: DEFAULT_SANDBOX_ID,
-      name: '默认 Chrome',
-      category: 'other',
-      color: SANDBOX_COLORS.defaultInstance,
-      userDataPath,
-      fingerprintId: null,
-      metadata: { isDefault: true },
-    });
-    logger.info('Default Chrome sandbox registered', { userDataPath });
-  } else {
-    sandbox = sandboxStore.update(DEFAULT_SANDBOX_ID, {
-      userDataPath,
-      metadata: { isDefault: true },
-    });
-  }
+  const sandboxData = {
+    id: DEFAULT_SANDBOX_ID,
+    name: '默认 Chrome',
+    category: 'other',
+    color: SANDBOX_COLORS.defaultInstance,
+    userDataPath,
+    fingerprintId: null,
+    metadata: { isDefault: true },
+  };
 
-  await persistExtensionsFromProfile(DEFAULT_SANDBOX_ID, getDefaultChromeProfilePath());
+  const sandbox = existing
+    ? sandboxStore.update(DEFAULT_SANDBOX_ID, { userDataPath, metadata: { isDefault: true } })
+    : sandboxStore.create(sandboxData);
+
+  if (!existing) logger.info('Default Chrome sandbox registered', { userDataPath });
   return sandbox;
 }
 
@@ -145,7 +124,6 @@ export const sandboxService = {
       metadata: { inheritExtensions: Boolean(inheritExtensions) },
     });
 
-    await persistExtensionsFromProfile(sandboxId, profilePath);
     logger.info('Sandbox created', { sandboxId, name, inheritExtensions });
     return sandbox;
   },

@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(C:\\\\Users\\\\c\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh *)"
+      "Bash(C:\\\\Users\\\\c\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh *)",
+      "Bash(rm \"D:\\\\project\\\\chrome1\\\\renderer\\\\components\\\\ExtensionManager.vue\")",
+      "Bash(rm \"D:\\\\project\\\\chrome1\\\\src\\\\store\\\\extension-store.js\")",
+      "Bash(pnpm dev *)",
+      "Bash(pnpm vite *)",
+      "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\ipc\\\\handlers.js\")",
+      "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\services\\\\sandbox-service.js\")",
+      "Bash(node --check \"D:\\\\project\\\\chrome1\\\\src\\\\store\\\\database.js\")",
+      "Bash(node *)"
     ]
   }
 }

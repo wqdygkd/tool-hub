@@ -4,28 +4,12 @@ import { getDefaultChromeProfilePath, getChromeUserDataRoot, getSandboxProfileDi
 import { copyIfExists, ensureDir, readJsonFile, writeJsonFile } from '../utils/file-ops.js';
 import { logger } from '../utils/logger.js';
 
-const PROFILE_ITEMS_BASE = [
-  'Bookmarks',
-  'Preferences',
-  'Secure Preferences',
-];
+const PROFILE_ITEMS_BASE = ['Bookmarks', 'Preferences', 'Secure Preferences'];
+const PROFILE_ITEMS_EXTENSIONS = ['Extensions', 'Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
+const REPAIR_ITEMS = ['Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
 
-const PROFILE_ITEMS_EXTENSIONS = [
-  'Extensions',
-  'Extension State',
-  'Local Extension Settings',
-  'Extension Scripts',
-  'Extension Rules',
-];
-
-const CLONE_PROFILE_ITEMS = [...PROFILE_ITEMS_BASE, ...PROFILE_ITEMS_EXTENSIONS];
-
-const REPAIR_PROFILE_ITEMS = CLONE_PROFILE_ITEMS.filter(
-  (item) => !['Bookmarks', 'Preferences', 'Extensions'].includes(item),
-);
-
-function getCloneProfileItems(inheritExtensions) {
-  return inheritExtensions ? CLONE_PROFILE_ITEMS : PROFILE_ITEMS_BASE;
+function getCloneItems(inheritExtensions) {
+  return inheritExtensions ? [...PROFILE_ITEMS_BASE, ...PROFILE_ITEMS_EXTENSIONS] : PROFILE_ITEMS_BASE;
 }
 
 export async function cloneProfile(
@@ -34,7 +18,7 @@ export async function cloneProfile(
   { inheritExtensions = false } = {},
 ) {
   await ensureDir(targetProfilePath);
-  const items = getCloneProfileItems(inheritExtensions);
+  const items = getCloneItems(inheritExtensions);
 
   for (const item of items) {
     const src = path.join(sourceProfilePath, item);
@@ -66,7 +50,7 @@ export async function repairSandboxProfile(sandboxPath, sourceProfilePath = getD
   const profilePath = await ensureSandboxProfilePath(sandboxPath, profileDirName);
   await ensureDir(profilePath);
 
-  for (const item of REPAIR_PROFILE_ITEMS) {
+  for (const item of REPAIR_ITEMS) {
     const dest = path.join(profilePath, item);
     if (!await fs.pathExists(dest)) {
       const src = path.join(sourceProfilePath, item);

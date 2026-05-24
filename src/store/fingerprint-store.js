@@ -1,5 +1,33 @@
 import { getDatabase } from './database.js';
 
+const FIELDS = [
+  { key: 'id', col: 'id' },
+  { key: 'navigator.userAgent', col: 'user_agent' },
+  { key: 'navigator.platform', col: 'platform' },
+  { key: 'navigator.language', col: 'language' },
+  { key: 'navigator.hardwareConcurrency', col: 'hardware_concurrency' },
+  { key: 'navigator.deviceMemory', col: 'device_memory' },
+  { key: 'canvas.noiseLevel', col: 'canvas_noise_level' },
+  { key: 'canvas.noiseSeed', col: 'canvas_noise_seed' },
+  { key: 'webgl.vendor', col: 'webgl_vendor' },
+  { key: 'webgl.renderer', col: 'webgl_renderer' },
+  { key: 'screen.width', col: 'screen_width' },
+  { key: 'screen.height', col: 'screen_height' },
+  { key: 'screen.colorDepth', col: 'screen_color_depth' },
+  { key: 'screen.devicePixelRatio', col: 'device_pixel_ratio' },
+  { key: 'audio.noiseEnabled', col: 'audio_noise_enabled', transform: (v) => v ? 1 : 0 },
+  { key: 'audio.noiseLevel', col: 'audio_noise_level' },
+  { key: 'timezone.offset', col: 'timezone_offset' },
+  { key: 'timezone.name', col: 'timezone_name' },
+];
+
+function getNestedValue(obj, path) {
+  const keys = path.split('.');
+  let value = obj;
+  for (const k of keys) value = value?.[k];
+  return value;
+}
+
 function mapRow(row) {
   if (!row) return null;
   return {
@@ -38,6 +66,22 @@ function mapRow(row) {
   };
 }
 
+function buildParams(data) {
+  const params = {};
+  for (const f of FIELDS) {
+    if (f.key === 'id') continue;
+    const value = getNestedValue(data, f.key);
+    params[f.col] = f.transform ? f.transform(value) : value;
+  }
+  return params;
+}
+
+const INSERT_FIELDS = FIELDS.filter(f => f.key !== 'id');
+const INSERT_COLS = INSERT_FIELDS.map(f => f.col).join(', ');
+const INSERT_PARAMS = INSERT_FIELDS.map(f => `@${f.col}`).join(', ');
+
+const UPDATE_CLAUSES = INSERT_FIELDS.map(f => `${f.col} = @${f.col}`).join(', ');
+
 export const fingerprintStore = {
   getById(id) {
     const row = getDatabase().prepare('SELECT * FROM fingerprints WHERE id = ?').get(id);
@@ -46,82 +90,15 @@ export const fingerprintStore = {
 
   create(data) {
     getDatabase().prepare(`
-      INSERT INTO fingerprints (
-        id, user_agent, platform, language, hardware_concurrency, device_memory,
-        canvas_noise_level, canvas_noise_seed, webgl_vendor, webgl_renderer,
-        screen_width, screen_height, screen_color_depth, device_pixel_ratio,
-        audio_noise_enabled, audio_noise_level, timezone_offset, timezone_name
-      ) VALUES (
-        @id, @userAgent, @platform, @language, @hardwareConcurrency, @deviceMemory,
-        @canvasNoiseLevel, @canvasNoiseSeed, @webglVendor, @webglRenderer,
-        @screenWidth, @screenHeight, @screenColorDepth, @devicePixelRatio,
-        @audioNoiseEnabled, @audioNoiseLevel, @timezoneOffset, @timezoneName
-      )
-    `).run({
-      id: data.id,
-      userAgent: data.navigator.userAgent,
-      platform: data.navigator.platform,
-      language: data.navigator.language,
-      hardwareConcurrency: data.navigator.hardwareConcurrency,
-      deviceMemory: data.navigator.deviceMemory,
-      canvasNoiseLevel: data.canvas.noiseLevel,
-      canvasNoiseSeed: data.canvas.noiseSeed,
-      webglVendor: data.webgl.vendor,
-      webglRenderer: data.webgl.renderer,
-      screenWidth: data.screen.width,
-      screenHeight: data.screen.height,
-      screenColorDepth: data.screen.colorDepth,
-      devicePixelRatio: data.screen.devicePixelRatio,
-      audioNoiseEnabled: data.audio.noiseEnabled ? 1 : 0,
-      audioNoiseLevel: data.audio.noiseLevel,
-      timezoneOffset: data.timezone.offset,
-      timezoneName: data.timezone.name,
-    });
+      INSERT INTO fingerprints (id, ${INSERT_COLS}) VALUES (@id, ${INSERT_PARAMS})
+    `).run({ id: data.id, ...buildParams(data) });
     return this.getById(data.id);
   },
 
   update(id, data) {
     getDatabase().prepare(`
-      UPDATE fingerprints SET
-        user_agent = @userAgent,
-        platform = @platform,
-        language = @language,
-        hardware_concurrency = @hardwareConcurrency,
-        device_memory = @deviceMemory,
-        canvas_noise_level = @canvasNoiseLevel,
-        canvas_noise_seed = @canvasNoiseSeed,
-        webgl_vendor = @webglVendor,
-        webgl_renderer = @webglRenderer,
-        screen_width = @screenWidth,
-        screen_height = @screenHeight,
-        screen_color_depth = @screenColorDepth,
-        device_pixel_ratio = @devicePixelRatio,
-        audio_noise_enabled = @audioNoiseEnabled,
-        audio_noise_level = @audioNoiseLevel,
-        timezone_offset = @timezoneOffset,
-        timezone_name = @timezoneName,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = @id
-    `).run({
-      id,
-      userAgent: data.navigator.userAgent,
-      platform: data.navigator.platform,
-      language: data.navigator.language,
-      hardwareConcurrency: data.navigator.hardwareConcurrency,
-      deviceMemory: data.navigator.deviceMemory,
-      canvasNoiseLevel: data.canvas.noiseLevel,
-      canvasNoiseSeed: data.canvas.noiseSeed,
-      webglVendor: data.webgl.vendor,
-      webglRenderer: data.webgl.renderer,
-      screenWidth: data.screen.width,
-      screenHeight: data.screen.height,
-      screenColorDepth: data.screen.colorDepth,
-      devicePixelRatio: data.screen.devicePixelRatio,
-      audioNoiseEnabled: data.audio.noiseEnabled ? 1 : 0,
-      audioNoiseLevel: data.audio.noiseLevel,
-      timezoneOffset: data.timezone.offset,
-      timezoneName: data.timezone.name,
-    });
+      UPDATE fingerprints SET ${UPDATE_CLAUSES}, updated_at = CURRENT_TIMESTAMP WHERE id = @id
+    `).run({ id, ...buildParams(data) });
     return this.getById(id);
   },
 };

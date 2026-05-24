@@ -1,6 +1,17 @@
 <template>
   <section class="status-panel">
     <template v-if="sandbox">
+      <ActionBar
+        :running="sandbox.status === 'running'"
+        :name="sandbox.name"
+        :is-default="isDefault"
+        @activate="$emit('activate')"
+        @close="$emit('close')"
+        @delete="$emit('delete')"
+        @rename="$emit('rename', $event)"
+        @edit-fingerprint="$emit('edit-fingerprint')"
+      />
+
       <div class="panel-header">
         <h2>{{ sandbox.name }}</h2>
         <el-tag v-if="isDefault" type="warning" size="small">默认实例</el-tag>
@@ -35,23 +46,6 @@
         </div>
         <p v-else class="muted">暂无指纹信息</p>
       </div>
-
-      <div class="section-block">
-        <h3>插件状态</h3>
-        <p>{{ extensions.length }} 个{{ isDefault ? '已安装' : '继承' }}插件</p>
-      </div>
-
-      <ActionBar
-        :running="sandbox.status === 'running'"
-        :name="sandbox.name"
-        :is-default="isDefault"
-        @activate="$emit('activate')"
-        @close="$emit('close')"
-        @delete="$emit('delete')"
-        @rename="$emit('rename', $event)"
-        @edit-fingerprint="$emit('edit-fingerprint')"
-        @manage-extensions="$emit('manage-extensions')"
-      />
     </template>
 
     <div v-else class="empty-panel">
@@ -68,10 +62,9 @@ import { isDefaultSandbox, formatSandboxStatus } from '@shared/constants/sandbox
 const props = defineProps({
   sandbox: { type: Object, default: null },
   fingerprint: { type: Object, default: null },
-  extensions: { type: Array, default: () => [] },
 });
 
-defineEmits(['activate', 'close', 'delete', 'rename', 'edit-fingerprint', 'manage-extensions']);
+defineEmits(['activate', 'close', 'delete', 'rename', 'edit-fingerprint']);
 
 const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 </script>

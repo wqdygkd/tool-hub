@@ -32,17 +32,22 @@ function pick(list) {
   return list[randomInt(list.length)];
 }
 
+function getPlatform() {
+  if (process.platform === 'darwin') return 'MacIntel';
+  if (process.platform === 'win32') return 'Win32';
+  return 'Linux x86_64';
+}
+
 export function generateRandomFingerprint() {
   const resolution = pick(RESOLUTIONS);
   const webgl = pick(WEBGL_PROFILES);
   const timezone = pick(TIMEZONES);
-  const platform = process.platform === 'darwin' ? 'MacIntel' : process.platform === 'win32' ? 'Win32' : 'Linux x86_64';
 
   return {
     id: uuidv4(),
     navigator: {
       userAgent: pick(USER_AGENTS),
-      platform,
+      platform: getPlatform(),
       language: 'zh-CN,zh;q=0.9,en;q=0.8',
       hardwareConcurrency: pick([4, 6, 8, 12, 16]),
       deviceMemory: pick([4, 8, 16]),

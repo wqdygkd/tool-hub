@@ -6,13 +6,11 @@ export const useSandboxStore = defineStore('sandbox', () => {
   const sandboxes = ref([]);
   const selectedId = ref(null);
   const fingerprint = ref(null);
-  const extensions = ref([]);
 
   const selectedSandbox = computed(() => sandboxes.value.find((s) => s.id === selectedId.value) || null);
-  const channels = () => ipcChannels();
 
   async function loadAll() {
-    sandboxes.value = await invokeIpc(channels().SANDBOX_GET_ALL);
+    sandboxes.value = await invokeIpc(ipcChannels().SANDBOX_GET_ALL);
     if (!selectedId.value && sandboxes.value.length > 0) {
       selectedId.value = sandboxes.value[0].id;
     }
@@ -23,30 +21,30 @@ export const useSandboxStore = defineStore('sandbox', () => {
   }
 
   async function create(data) {
-    const sandbox = await invokeIpc(channels().SANDBOX_CREATE, data);
+    const sandbox = await invokeIpc(ipcChannels().SANDBOX_CREATE, data);
     await loadAll();
     selectedId.value = sandbox.id;
     return sandbox;
   }
 
   async function activate(id) {
-    await invokeIpc(channels().SANDBOX_ACTIVATE, id);
+    await invokeIpc(ipcChannels().SANDBOX_ACTIVATE, id);
     await loadAll();
   }
 
   async function close(id) {
-    await invokeIpc(channels().SANDBOX_CLOSE, id);
+    await invokeIpc(ipcChannels().SANDBOX_CLOSE, id);
     await loadAll();
   }
 
   async function remove(id) {
-    await invokeIpc(channels().SANDBOX_DELETE, id);
+    await invokeIpc(ipcChannels().SANDBOX_DELETE, id);
     if (selectedId.value === id) selectedId.value = null;
     await loadAll();
   }
 
   async function update(id, data) {
-    await invokeIpc(channels().SANDBOX_UPDATE, id, data);
+    await invokeIpc(ipcChannels().SANDBOX_UPDATE, id, data);
     await loadAll();
   }
 
@@ -56,11 +54,7 @@ export const useSandboxStore = defineStore('sandbox', () => {
       fingerprint.value = null;
       return;
     }
-    fingerprint.value = await invokeIpc(channels().FINGERPRINT_GET_BY_ID, sandbox.fingerprintId);
-  }
-
-  async function loadExtensions(sandboxId) {
-    extensions.value = await invokeIpc(channels().EXTENSION_GET_ALL, sandboxId);
+    fingerprint.value = await invokeIpc(ipcChannels().FINGERPRINT_GET_BY_ID, sandbox.fingerprintId);
   }
 
   return {
@@ -68,7 +62,6 @@ export const useSandboxStore = defineStore('sandbox', () => {
     selectedId,
     selectedSandbox,
     fingerprint,
-    extensions,
     loadAll,
     select,
     create,
@@ -77,6 +70,5 @@ export const useSandboxStore = defineStore('sandbox', () => {
     remove,
     update,
     loadFingerprint,
-    loadExtensions,
   };
 });
