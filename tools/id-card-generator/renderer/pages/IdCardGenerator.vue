@@ -11,16 +11,7 @@
         </el-form-item>
 
         <el-form-item label="年龄范围">
-          <div class="age-range">
-            <el-slider
-              v-model="ageRange"
-              range
-              :min="1"
-              :max="100"
-              :marks="ageMarks"
-              class="age-slider"
-            />
-          </div>
+          <el-slider v-model="ageRange" range :min="1" :max="100" />
         </el-form-item>
       </el-form>
 
@@ -60,13 +51,6 @@ import { generateIdCard, GENDER } from '../shared/generator.js';
 const gender = ref(GENDER.RANDOM);
 const ageRange = ref([18, 60]);
 const result = ref(null);
-
-const ageMarks = {
-  18: '18',
-  40: '40',
-  60: '60',
-  80: '80',
-};
 
 function handleGenerate() {
   result.value = generateIdCard({
@@ -112,15 +96,6 @@ onMounted(() => {
 
 .config-form {
   margin-bottom: var(--spacing-lg);
-}
-
-.age-range {
-  width: 100%;
-  padding-right: var(--spacing-md);
-}
-
-.age-slider {
-  margin-bottom: var(--spacing-xs);
 }
 
 .actions {

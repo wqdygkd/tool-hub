@@ -9,6 +9,11 @@ export const GENDER = {
   RANDOM: 'random',
 };
 
+const GENDER_LABEL = {
+  [GENDER.MALE]: '男',
+  [GENDER.FEMALE]: '女',
+};
+
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -44,10 +49,7 @@ function randomBirthDate(minAge, maxAge) {
 
   const startMs = earliestBirth.getTime();
   const endMs = latestBirth.getTime();
-  const randomMs = startMs + Math.random() * (endMs - startMs);
-  const birthDate = new Date(randomMs);
-
-  return formatDate(birthDate);
+  return formatDate(new Date(startMs + Math.random() * (endMs - startMs)));
 }
 
 function randomSequence(gender) {
@@ -63,8 +65,8 @@ function randomSequence(gender) {
 }
 
 function inferGender(sequence) {
-  const lastDigit = Number(sequence.slice(-1));
-  return lastDigit % 2 === 1 ? GENDER.MALE : GENDER.FEMALE;
+  if (Number(sequence.at(-1)) % 2 === 1) return GENDER.MALE;
+  return GENDER.FEMALE;
 }
 
 export function calcCheckDigit(body17) {
@@ -90,7 +92,6 @@ export function generateIdCard({ gender = GENDER.RANDOM, minAge = 18, maxAge = 6
     birthDate,
     birthDateDisplay: formatDisplayDate(birthDate),
     gender: resolvedGender,
-    genderLabel: resolvedGender === GENDER.MALE ? '男' : '女',
-    sequence,
+    genderLabel: GENDER_LABEL[resolvedGender],
   };
 }

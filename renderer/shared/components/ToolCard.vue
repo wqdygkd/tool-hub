@@ -84,15 +84,4 @@ defineEmits(['click']);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
-
-.tool-card.placeholder {
-  background: var(--color-muted);
-  border-style: dashed;
-  cursor: default;
-}
-
-.tool-card.placeholder:hover {
-  transform: none;
-  box-shadow: none;
-}
 </style>
