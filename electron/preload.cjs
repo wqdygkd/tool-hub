@@ -20,7 +20,7 @@ const IPC_CHANNELS = {
   EVENT_MEMORY_UPDATE: 'sandbox:memory-update',
 };
 
-contextBridge.exposeInMainWorld('sessionbox', {
+contextBridge.exposeInMainWorld('chromeSandbox', {
   invoke(channel, ...args) {
     return ipcRenderer.invoke(channel, ...args);
   },

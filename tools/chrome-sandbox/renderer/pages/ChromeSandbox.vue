@@ -1,5 +1,5 @@
 <template>
-  <div class="sessionbox-page">
+  <div class="chrome-sandbox-page">
     <aside class="sidebar">
       <div class="sidebar-title">沙箱列表</div>
       <div class="sandbox-list">
@@ -113,7 +113,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.sessionbox-page {
+.chrome-sandbox-page {
   display: grid;
   grid-template-columns: 220px 1fr;
   flex: 1;

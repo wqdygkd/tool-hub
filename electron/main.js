@@ -2,10 +2,10 @@ import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
-import { registerIpcHandlers } from '../tools/sessionbox/backend/ipc/handlers.js';
-import { getDatabase, closeDatabase } from '../tools/sessionbox/backend/store/database.js';
-import { getDataDirectory } from '../tools/sessionbox/backend/utils/path-helper.js';
-import { logger } from '../tools/sessionbox/backend/utils/logger.js';
+import { registerIpcHandlers } from '../tools/chrome-sandbox/backend/ipc/handlers.js';
+import { getDatabase, closeDatabase } from '../tools/chrome-sandbox/backend/store/database.js';
+import { getDataDirectory } from '../tools/chrome-sandbox/backend/utils/path-helper.js';
+import { logger } from '../tools/chrome-sandbox/backend/utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use app.isPackaged for reliable detection (NODE_ENV may not be set in packaged apps)
@@ -23,7 +23,7 @@ async function createWindow() {
     height: 900,
     minWidth: 800,
     minHeight: 500,
-    title: 'SessionBox',
+    title: 'Chrome沙箱',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

@@ -1,6 +1,6 @@
 {
-  "appId": "com.sessionbox.app",
-  "productName": "SessionBox",
+  "appId": "com.chrome-sandbox.app",
+  "productName": "Chrome沙箱",
   "directories": {
     "output": "release"
   },
@@ -13,7 +13,7 @@
   ],
   "extraResources": [
     {
-      "from": "tools/sessionbox/extension",
+      "from": "tools/chrome-sandbox/extension",
       "to": "extension"
     }
   ],

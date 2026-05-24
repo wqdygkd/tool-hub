@@ -26,7 +26,7 @@ const IPC_CHANNELS = {
   ${indented}
 };
 
-contextBridge.exposeInMainWorld('sessionbox', {
+contextBridge.exposeInMainWorld('chromeSandbox', {
   invoke(channel, ...args) {
     return ipcRenderer.invoke(channel, ...args);
   },

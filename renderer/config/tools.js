@@ -1,6 +1,6 @@
-import sessionbox from '@tools/sessionbox/index.js';
+import chromeSandbox from '@tools/chrome-sandbox/index.js';
 
-export const toolRegistry = [sessionbox];
+export const toolRegistry = [chromeSandbox];
 
 export function getToolById(id) {
   return toolRegistry.find((tool) => tool.id === id);

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { invokeIpc, ipcChannels } from '@renderer/shared/composables/useIpc.js';
 
-export const useSandboxStore = defineStore('sessionbox/sandbox', () => {
+export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
   const sandboxes = ref([]);
   const selectedId = ref(null);
   const fingerprint = ref(null);

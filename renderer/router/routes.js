@@ -1,6 +1,6 @@
 import HomePage from '../pages/HomePage.vue';
 import ToolLayout from '../layouts/ToolLayout.vue';
-import sessionbox from '@tools/sessionbox/index.js';
+import chromeSandbox from '@tools/chrome-sandbox/index.js';
 
 export const routes = [
   {
@@ -13,7 +13,7 @@ export const routes = [
     path: '/tools',
     component: ToolLayout,
     children: [
-      sessionbox.route,
+      chromeSandbox.route,
     ],
   },
   {

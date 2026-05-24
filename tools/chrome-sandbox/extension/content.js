@@ -6,7 +6,7 @@
     const response = await fetch(configUrl);
     config = await response.json();
   } catch (error) {
-    console.warn('[SessionBox] Failed to load fingerprint config', error);
+    console.warn('[Chrome沙箱] Failed to load fingerprint config', error);
     return;
   }
 

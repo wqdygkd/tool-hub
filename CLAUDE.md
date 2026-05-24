@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-SessionBox 多功能工具平台的 Claude Code 项目指南。
+Chrome沙箱 多功能工具平台的 Claude Code 项目指南。
 
 ## 项目概述
 
-Electron + Vue 3 + Pinia + Element Plus + Vite 多工具平台。SessionBox 是首个工具模块，提供多沙箱浏览器管理功能。
+Electron + Vue 3 + Pinia + Element Plus + Vite 多工具平台。Chrome沙箱 是首个工具模块，提供多沙箱浏览器管理功能。
 
 ## 架构
 
@@ -34,12 +34,12 @@ project/
 │   │   └── styles/main.css  # CSS 变量定义
 │   └── config/tools.js      # 工具注册表
 │
-├── tools/sessionbox/
+├── tools/chrome-sandbox/
 │   ├── index.js             # 工具定义（id, name, route）
 │   ├── renderer/
 │   │   ├── components/      # SandboxCard, StatusPanel, ActionBar 等
-│   │   ├── stores/          # sandboxStore（命名空间 sessionbox/sandbox）
-│   │   ├── pages/           # SessionBox.vue
+│   │   ├── stores/          # sandboxStore（命名空间 chrome-sandbox/sandbox）
+│   │   ├── pages/           # ChromeSandbox.vue
 │   │   └── shared/          # sandbox.js 常量
 │   ├── backend/
 │   │   ├── ipc/             # channels.js + handlers.js
@@ -53,7 +53,7 @@ project/
 │   └── assets/              # 工具资源
 │
 ├── electron/
-│   ├── main.js              # 引用 tools/sessionbox/backend
+│   ├── main.js              # 引用 tools/chrome-sandbox/backend
 │   └── preload.cjs          # IPC 通道暴露
 │
 ├── shared/                  # 跨工具共享（预留）
@@ -76,16 +76,16 @@ project/
 
 ```javascript
 export default {
-  id: 'sessionbox',           // 唯一标识
-  name: 'SessionBox',         // 显示名称
+  id: 'chrome-sandbox',           // 唯一标识
+  name: 'Chrome沙箱',             // 显示名称
   description: '多沙箱浏览器管理',
   version: '1.0.0',
-  color: '#3b82f6',           // 卡片颜色
+  color: '#3b82f6',               // 卡片颜色
   route: {
-    path: 'sessionbox',
-    name: 'tool-sessionbox',
-    component: SessionBoxPage,
-    meta: { toolId: 'sessionbox' },
+    path: 'chrome-sandbox',
+    name: 'tool-chrome-sandbox',
+    component: ChromeSandboxPage,
+    meta: { toolId: 'chrome-sandbox' },
   },
 };
 ```
@@ -131,14 +131,14 @@ const channels = ipcChannels();
 await invokeIpc(channels.SANDBOX_CREATE, { name: '新沙箱' });
 ```
 
-IPC 通道定义：`tools/sessionbox/backend/ipc/channels.js`
+IPC 通道定义：`tools/chrome-sandbox/backend/ipc/channels.js`
 
 ### Pinia Store
 
 使用模块命名空间避免冲突：
 
 ```javascript
-defineStore('sessionbox/sandbox', () => { ... });
+defineStore('chrome-sandbox/sandbox', () => { ... });
 ```
 
 ### 常量文件
@@ -167,13 +167,13 @@ defineStore('sessionbox/sandbox', () => { ... });
 3. 注册到 `renderer/config/tools.js`：
    ```javascript
    import newTool from '@tools/new-tool/index.js';
-   export const toolRegistry = [sessionbox, newTool];
+   export const toolRegistry = [chromeSandbox, newTool];
    ```
 
 4. 路由添加到 `renderer/router/routes.js`：
    ```javascript
    children: [
-     sessionbox.route,
+     chromeSandbox.route,
      newTool.route,
    ]
    ```
@@ -193,11 +193,11 @@ pnpm dist         # 打包安装程序
 |----------|------|
 | 工具注册 | `renderer/config/tools.js` |
 | 路由配置 | `renderer/router/routes.js` |
-| IPC 通道 | `tools/sessionbox/backend/ipc/channels.js` |
-| IPC 处理 | `tools/sessionbox/backend/ipc/handlers.js` |
-| 沙箱服务 | `tools/sessionbox/backend/services/sandbox-service.js` |
-| 数据库 | `tools/sessionbox/backend/store/database.js` |
-| 路径计算 | `tools/sessionbox/backend/utils/path-helper.js` |
+| IPC 通道 | `tools/chrome-sandbox/backend/ipc/channels.js` |
+| IPC 处理 | `tools/chrome-sandbox/backend/ipc/handlers.js` |
+| 沙箱服务 | `tools/chrome-sandbox/backend/services/sandbox-service.js` |
+| 数据库 | `tools/chrome-sandbox/backend/store/database.js` |
+| 路径计算 | `tools/chrome-sandbox/backend/utils/path-helper.js` |
 | 全局样式 | `renderer/shared/styles/main.css` |
 | IPC 前端封装 | `renderer/shared/composables/useIpc.js` |
 

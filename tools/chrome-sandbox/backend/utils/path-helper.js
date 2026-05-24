@@ -66,7 +66,7 @@ export function getExtensionTemplatePath() {
   // In dev: source directory
   // In prod: extraResources copied to resources/extension/
   return isDev
-    ? path.join(APP_ROOT_DEV, 'tools', 'sessionbox', 'extension')
+    ? path.join(APP_ROOT_DEV, 'tools', 'chrome-sandbox', 'extension')
     : path.join(process.resourcesPath, 'extension');
 }
 

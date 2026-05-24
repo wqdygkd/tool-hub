@@ -1,4 +1,4 @@
-# SessionBox Platform
+# Chrome沙箱 Platform
 
 多功能工具平台，基于 Electron + Vue 3 + Chrome 多实例方案。
 
@@ -17,7 +17,7 @@ project/
 │   └── config/tools.js       # 工具注册表
 │
 ├── tools/                    # 工具目录
-│   └── sessionbox/           # SessionBox 工具（完全独立）
+│   └── chrome-sandbox/       # Chrome沙箱 工具（完全独立）
 │       ├── index.js          # 工具入口定义
 │       ├── renderer/         # 工具前端
 │       │   ├── components/   # Vue 组件
@@ -54,7 +54,7 @@ project/
 | `shared/` | 跨工具共享代码（预留） |
 | `data/` | 运行时数据（config.db, sandboxes/） |
 
-## SessionBox 工具功能
+## Chrome沙箱 工具功能
 
 - 独立 Chrome Profile 沙箱管理
 - 默认 Chrome 实例（使用系统 Profile）
