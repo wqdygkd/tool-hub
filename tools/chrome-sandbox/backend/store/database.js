@@ -68,6 +68,11 @@ export function getDatabase() {
   return db;
 }
 
+export function reloadDatabase() {
+  closeDatabase();
+  return getDatabase();
+}
+
 export function closeDatabase() {
   if (db) {
     db.close();

@@ -5,11 +5,8 @@
         <el-input v-model="form.chromePath" placeholder="自动检测或手动填写" />
       </el-form-item>
       <el-form-item label="数据目录">
-        <div class="data-directory-row">
-          <el-input v-model="form.dataDirectory" placeholder="沙箱与配置文件存储位置" />
-          <el-button @click="browseDataDirectory">选择</el-button>
-        </div>
-        <span class="form-hint">更改后需重启应用生效；已有沙箱数据不会自动迁移到新目录。</span>
+        <DataDirectoryField v-model="form.dataDirectory" />
+        <span class="form-hint">更改后会立即切换数据目录；已有沙箱数据不会自动迁移到新目录。</span>
       </el-form-item>
       <el-form-item label="启动时自动恢复">
         <el-switch v-model="form.autoRestoreOnStartup" />
@@ -30,12 +27,13 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { ElMessage } from 'element-plus';
+import DataDirectoryField from './DataDirectoryField.vue';
 import { invokeIpc, ipcChannels } from '@renderer/shared/composables/useIpc.js';
 import { useDialogVisible } from '@renderer/shared/composables/useDialogVisible.js';
 
 const props = defineProps({ modelValue: Boolean });
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'saved']);
 
 const loading = ref(false);
 const form = reactive({
@@ -73,14 +71,6 @@ async function detectChrome() {
   ElMessage.success('已检测到 Chrome');
 }
 
-async function browseDataDirectory() {
-  const selected = await runSettingAction(
-    () => invokeIpc(channels.CONFIG_SELECT_DATA_DIRECTORY),
-    '选择目录失败',
-  );
-  if (selected) form.dataDirectory = selected;
-}
-
 async function save() {
   if (!form.dataDirectory.trim()) {
     ElMessage.warning('请选择或填写数据目录');
@@ -92,9 +82,7 @@ async function save() {
     const result = await invokeIpc(channels.CONFIG_UPDATE, { ...form });
     ElMessage.success('设置已保存');
     visible.value = false;
-    if (result.requiresRestart) {
-      await ElMessageBox.alert('数据目录已更改，请重启应用后生效。', '需要重启', { type: 'warning' });
-    }
+    emit('saved', result);
   } catch (error) {
     ElMessage.error(error.message || '保存失败');
   } finally {
@@ -104,16 +92,6 @@ async function save() {
 </script>
 
 <style scoped>
-.data-directory-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.data-directory-row .el-input {
-  flex: 1;
-}
-
 .form-hint {
   display: block;
   margin-top: 6px;

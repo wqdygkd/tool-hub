@@ -21,6 +21,13 @@
     "target": "nsis",
     "icon": "resources/icons/icon.ico"
   },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "unicode": true,
+    "warningsAsErrors": false,
+    "include": "build/installer.nsh"
+  },
   "mac": {
     "target": "dmg",
     "icon": "resources/icons/icon.icns"

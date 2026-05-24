@@ -3,12 +3,12 @@ import { IPC_CHANNELS } from './channels.js';
 import { sandboxService, updateSandboxFingerprint } from '../services/sandbox-service.js';
 import { fingerprintStore } from '../store/fingerprint-store.js';
 import { configStore } from '../store/config-store.js';
+import { withSetupState } from '../store/config-setup.js';
 import { detectChromePath } from '../chrome/detector.js';
 import { generateRandomFingerprint } from '../fingerprint/generator.js';
 import { setStatusEmitter } from '../services/sandbox-service.js';
-import {
-  applyDataDirectoryChange,
-} from '../utils/path-helper.js';
+import { applyDataDirectoryChange, markDataDirectoryConfigured } from '../utils/path-helper.js';
+import { reloadDatabase } from '../store/database.js';
 import { logger } from '../utils/logger.js';
 
 function broadcast(channel, payload) {
@@ -42,7 +42,7 @@ export function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.FINGERPRINT_UPDATE, (_event, sandboxId, data) => updateSandboxFingerprint(sandboxId, data));
 
   ipcMain.handle(IPC_CHANNELS.CHROME_DETECT_PATH, () => detectChromePath());
-  ipcMain.handle(IPC_CHANNELS.CONFIG_GET, () => configStore.getAll());
+  ipcMain.handle(IPC_CHANNELS.CONFIG_GET, async () => withSetupState(configStore.getAll()));
   ipcMain.handle(IPC_CHANNELS.CONFIG_SELECT_DATA_DIRECTORY, async () => {
     const result = await dialog.showOpenDialog({
       title: '选择数据目录',
@@ -52,15 +52,19 @@ export function registerIpcHandlers() {
     return result.filePaths[0];
   });
   ipcMain.handle(IPC_CHANNELS.CONFIG_UPDATE, async (_event, data) => {
-    let requiresRestart = false;
+    let dataDirectoryChanged = false;
 
     if (data?.dataDirectory !== undefined) {
       const result = await applyDataDirectoryChange(data.dataDirectory);
       data.dataDirectory = result.dataDirectory;
-      requiresRestart = result.requiresRestart;
+      if (result.changed) {
+        reloadDatabase();
+        dataDirectoryChanged = true;
+      }
+      await markDataDirectoryConfigured();
     }
 
     const config = configStore.update(data);
-    return { ...config, requiresRestart };
+    return withSetupState(config, { dataDirectoryChanged });
   });
 }
