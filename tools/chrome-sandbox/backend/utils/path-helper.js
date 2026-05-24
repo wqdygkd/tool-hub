@@ -1,7 +1,9 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import fs from 'fs-extra';
 import { app } from 'electron';
+import { logger } from './logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,11 +49,67 @@ export function getAppRoot() {
   return isDev ? APP_ROOT_DEV : app.getAppPath();
 }
 
-export function getDataDirectory() {
-  // Data should always be in user's app data folder (persist across updates)
+export function getDefaultDataDirectory() {
   return isDev
     ? path.join(APP_ROOT_DEV, 'data')
     : path.join(app.getPath('userData'), 'data');
+}
+
+let dataDirectoryOverride = null;
+
+export function getBootstrapConfigPath() {
+  return path.join(app.getPath('userData'), 'data-root.json');
+}
+
+export function setDataDirectoryOverride(dir) {
+  dataDirectoryOverride = normalizeDataDirectory(dir);
+}
+
+export function isSameDataDirectory(a, b) {
+  return path.resolve(a) === path.resolve(b);
+}
+
+export async function applyDataDirectoryChange(nextDirectory) {
+  const normalized = normalizeDataDirectory(nextDirectory) || getDefaultDataDirectory();
+  await fs.ensureDir(normalized);
+
+  const requiresRestart = !isSameDataDirectory(normalized, getDataDirectory());
+  if (requiresRestart) {
+    const bootstrapTarget = isSameDataDirectory(normalized, getDefaultDataDirectory()) ? null : normalized;
+    await saveDataDirectoryOverride(bootstrapTarget);
+  }
+
+  return { dataDirectory: normalized, requiresRestart };
+}
+
+export function normalizeDataDirectory(dir) {
+  if (!dir || !String(dir).trim()) return null;
+  return path.resolve(String(dir).trim());
+}
+
+export function getDataDirectory() {
+  return dataDirectoryOverride || getDefaultDataDirectory();
+}
+
+export async function loadDataDirectoryOverride() {
+  const bootstrapPath = getBootstrapConfigPath();
+  try {
+    if (!await fs.pathExists(bootstrapPath)) return;
+    const { dataDirectory } = await fs.readJson(bootstrapPath);
+    setDataDirectoryOverride(normalizeDataDirectory(dataDirectory));
+  } catch (error) {
+    logger.warn('Failed to load data directory override', { error: error.message });
+  }
+}
+
+export async function saveDataDirectoryOverride(dataDirectory) {
+  const bootstrapPath = getBootstrapConfigPath();
+  await fs.ensureDir(path.dirname(bootstrapPath));
+  if (!dataDirectory) {
+    await fs.remove(bootstrapPath);
+    return;
+  }
+  await fs.writeJson(bootstrapPath, { dataDirectory }, { spaces: 2 });
 }
 
 export function getSandboxesDirectory() {

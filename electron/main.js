@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs-extra';
 import { registerIpcHandlers } from '../tools/chrome-sandbox/backend/ipc/handlers.js';
 import { getDatabase, closeDatabase } from '../tools/chrome-sandbox/backend/store/database.js';
-import { getDataDirectory } from '../tools/chrome-sandbox/backend/utils/path-helper.js';
+import { loadDataDirectoryOverride, getDataDirectory } from '../tools/chrome-sandbox/backend/utils/path-helper.js';
 import { logger } from '../tools/chrome-sandbox/backend/utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,6 +14,7 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 
 async function createWindow() {
+  await loadDataDirectoryOverride();
   await fs.ensureDir(getDataDirectory());
   getDatabase();
   registerIpcHandlers();

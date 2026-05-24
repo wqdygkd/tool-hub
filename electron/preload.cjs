@@ -15,6 +15,7 @@ const IPC_CHANNELS = {
   CHROME_DETECT_PATH: 'chrome:detect-path',
   CONFIG_GET: 'config:get',
   CONFIG_UPDATE: 'config:update',
+  CONFIG_SELECT_DATA_DIRECTORY: 'config:select-data-directory',
   EVENT_STATUS_CHANGED: 'sandbox:status-changed',
   EVENT_PROCESS_EXITED: 'sandbox:process-exited',
   EVENT_MEMORY_UPDATE: 'sandbox:memory-update',

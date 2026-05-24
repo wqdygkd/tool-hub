@@ -1,10 +1,10 @@
 import { getDatabase } from './database.js';
-import { getDataDirectory } from '../utils/path-helper.js';
+import { getDefaultDataDirectory, getDataDirectory, normalizeDataDirectory } from '../utils/path-helper.js';
 
 const DEFAULTS = {
   chromePath: '',
   defaultProfile: '',
-  dataDirectory: getDataDirectory(),
+  dataDirectory: getDefaultDataDirectory(),
   autoRestoreOnStartup: false,
   preserveDataOnClose: true,
   showMemoryUsage: true,
@@ -21,6 +21,7 @@ export const configStore = {
         config[row.key] = row.value;
       }
     }
+    config.dataDirectory = getDataDirectory();
     return config;
   },
 
@@ -35,13 +36,18 @@ export const configStore = {
   },
 
   update(data) {
+    const payload = { ...data };
+    if ('dataDirectory' in payload) {
+      payload.dataDirectory = normalizeDataDirectory(payload.dataDirectory) || getDefaultDataDirectory();
+    }
+
     const stmt = getDatabase().prepare(`
       INSERT INTO global_config (key, value, updated_at)
       VALUES (@key, @value, CURRENT_TIMESTAMP)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
     `);
 
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(payload)) {
       stmt.run({ key, value: JSON.stringify(value) });
     }
     return this.getAll();

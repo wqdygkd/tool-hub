@@ -27,7 +27,11 @@
       "PowerShell(taskkill *)",
       "Bash(D:/project/chrome1/release/win-unpacked/SessionBox.exe *)",
       "Bash(netstat -ano)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(git cherry-pick *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "Bash(git push *)"
     ]
   }
 }
