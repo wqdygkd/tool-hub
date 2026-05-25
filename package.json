@@ -27,11 +27,10 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@parcel/watcher",
       "better-sqlite3",
       "electron",
-      "esbuild",
-      "rolldown",
-      "@rolldown/binding-win32-x64-msvc"
+      "electron-winstaller"
     ]
   },
   "dependencies": {

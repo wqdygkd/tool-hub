@@ -1,5 +1,6 @@
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
+import { resolveExecutablePath } from '../utils/resolve-executable.js';
 
 const execAsync = promisify(exec);
 
@@ -45,13 +46,14 @@ export class ProcessLauncher {
     this.processes = new Map();
   }
 
-  launch(profileId, executable, argsString, debugPort) {
+  async launch(profileId, executable, argsString, debugPort) {
     if (this.processes.has(profileId)) {
       throw new Error('该配置已在运行中');
     }
 
+    const resolvedExecutable = await resolveExecutablePath(executable);
     const args = ensureDebugPort(parseArgs(argsString), debugPort);
-    const child = spawn(executable, args, {
+    const child = spawn(resolvedExecutable, args, {
       detached: false,
       stdio: 'ignore',
       windowsHide: true,

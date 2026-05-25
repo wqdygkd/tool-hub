@@ -5,6 +5,7 @@ import { injectorService, setCdpStatusEmitter } from '../services/injector-servi
 import { listPageTargets } from '../services/cdp-client.js';
 import { openDevToolsFromPayload } from '../services/devtools-service.js';
 import fs from 'fs-extra';
+import { resolveExecutablePath } from '../utils/resolve-executable.js';
 
 function broadcast(channel, payload) {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -46,12 +47,19 @@ export function registerCdpInjectorHandlers() {
   });
 
   ipcMain.handle(CDP_IPC_CHANNELS.SELECT_EXECUTABLE, async () => {
+    const isDarwin = process.platform === 'darwin';
     const result = await dialog.showOpenDialog({
-      title: '选择可执行文件',
+      title: isDarwin ? '选择应用或可执行文件' : '选择可执行文件',
       properties: ['openFile'],
+      filters: isDarwin
+        ? [
+            { name: 'macOS 应用', extensions: ['app'] },
+            { name: '所有文件', extensions: ['*'] },
+          ]
+        : undefined,
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    return result.filePaths[0];
+    return resolveExecutablePath(result.filePaths[0]);
   });
 
   ipcMain.handle(CDP_IPC_CHANNELS.SELECT_SCRIPT_FILE, async () => {

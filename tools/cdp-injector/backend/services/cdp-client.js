@@ -91,13 +91,21 @@ async function connectWebSocket(wsUrl) {
   return ws;
 }
 
-async function injectTarget(wsUrl, scriptSource) {
+async function injectTarget(wsUrl, scriptSource, previousIdentifier = null) {
   const ws = await connectWebSocket(wsUrl);
   const call = createCdpCaller(ws);
   try {
     await call('Page.enable');
-    await call('Page.addScriptToEvaluateOnNewDocument', { source: scriptSource });
+    if (previousIdentifier) {
+      try {
+        await call('Page.removeScriptToEvaluateOnNewDocument', { identifier: previousIdentifier });
+      } catch {
+        // 旧标识可能已失效，忽略
+      }
+    }
+    const { identifier } = await call('Page.addScriptToEvaluateOnNewDocument', { source: scriptSource });
     await call('Runtime.evaluate', { expression: scriptSource, returnByValue: true });
+    return identifier;
   } finally {
     ws.close();
   }
@@ -176,10 +184,24 @@ export class CdpInjectionSession {
     }
   }
 
-  needsInjection(target) {
+  async injectIntoTarget(target, { force = false } = {}) {
     const prev = this.targetState.get(target.id);
     const url = target.url || '';
-    return !prev || prev.url !== url;
+    if (!force && prev && prev.url === url) {
+      return false;
+    }
+
+    const scriptIdentifier = await injectTarget(
+      target.webSocketDebuggerUrl,
+      this.scriptSource,
+      prev?.scriptIdentifier ?? null,
+    );
+    this.targetState.set(target.id, { url, scriptIdentifier });
+    return true;
+  }
+
+  setScriptSource(scriptSource) {
+    this.scriptSource = scriptSource;
   }
 
   async scanAndInject() {
@@ -193,11 +215,9 @@ export class CdpInjectionSession {
 
       for (const target of targets) {
         activeIds.add(target.id);
-        if (!this.needsInjection(target)) continue;
-
-        await injectTarget(target.webSocketDebuggerUrl, this.scriptSource);
-        this.targetState.set(target.id, { url: target.url || '' });
-        injectedCount += 1;
+        if (await this.injectIntoTarget(target)) {
+          injectedCount += 1;
+        }
       }
 
       this.pruneInactiveTargets(activeIds);
@@ -213,8 +233,31 @@ export class CdpInjectionSession {
   }
 
   async reinjectAll() {
-    this.targetState.clear();
-    return this.scanAndInject();
+    if (this.stopped) return 0;
+
+    this.injecting = true;
+    try {
+      const targets = await fetchTargets(this.port);
+      const activeIds = new Set();
+      let injectedCount = 0;
+
+      for (const target of targets) {
+        activeIds.add(target.id);
+        if (await this.injectIntoTarget(target, { force: true })) {
+          injectedCount += 1;
+        }
+      }
+
+      this.pruneInactiveTargets(activeIds);
+
+      if (injectedCount > 0 && this.onTargetsInjected) {
+        this.onTargetsInjected({ count: injectedCount, total: targets.length });
+      }
+
+      return injectedCount;
+    } finally {
+      this.injecting = false;
+    }
   }
 }
 

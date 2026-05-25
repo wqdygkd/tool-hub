@@ -191,7 +191,10 @@
         </el-form-item>
         <el-form-item label="可执行文件" required>
           <div class="path-row">
-            <el-input v-model="profileForm.executable" placeholder="C:\path\app.exe" />
+            <el-input
+              v-model="profileForm.executable"
+              placeholder="Windows: C:\path\app.exe；macOS: /Applications/App.app"
+            />
             <el-button @click="pickExecutable">浏览</el-button>
           </div>
         </el-form-item>

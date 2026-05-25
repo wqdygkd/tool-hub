@@ -95,7 +95,7 @@ export const injectorService = {
     });
 
     try {
-      const { pid, args } = processLauncher.launch(
+      const { pid, args } = await processLauncher.launch(
         profileId,
         profile.executable,
         profile.args ?? '',
@@ -190,6 +190,12 @@ export const injectorService = {
     if (session.paused) {
       throw new Error('DevTools 调试中，注入已暂停，请先关闭 DevTools 窗口');
     }
+    const profile = await cdpConfigStore.getProfileById(profileId);
+    if (!profile) {
+      throw new Error('应用配置不存在');
+    }
+    const scriptSource = await resolveScriptContent(profile);
+    session.setScriptSource(scriptSource);
     const count = await session.reinjectAll();
     setState(profileId, {
       status: 'running',
