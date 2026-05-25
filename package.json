@@ -6,9 +6,9 @@
   "type": "module",
   "packageManager": "pnpm@10.6.3",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron . --remote-debugging-port=0\"",
     "build": "vite build",
-    "start": "electron .",
+    "start": "electron . --remote-debugging-port=0",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "pack": "pnpm run build && electron-builder --dir",
     "dist": "pnpm run build && electron-builder"

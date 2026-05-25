@@ -9,6 +9,9 @@ import { getDatabase, closeDatabase } from '../tools/chrome-sandbox/backend/stor
 import { loadDataDirectoryOverride, getDataDirectory } from '../tools/chrome-sandbox/backend/utils/path-helper.js';
 import { logger } from '../tools/chrome-sandbox/backend/utils/logger.js';
 
+// Tool Hub 本体不对外暴露 Chromium 远程调试端口（CDP 仅用于注入外部应用）
+app.commandLine.appendSwitch('remote-debugging-port', '0');
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use app.isPackaged for reliable detection (NODE_ENV may not be set in packaged apps)
 const isDev = !app.isPackaged;
