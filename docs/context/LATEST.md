@@ -58,7 +58,7 @@ data/config.db
 |------|------|------|
 | `module not found: channels.cjs` | preload 沙箱不能 require 本地文件 | IPC_CHANNELS 内联于 `preload.cjs` |
 | `invoke` undefined | preload ESM + 顶层缓存 API | `preload.cjs` + `getSessionboxApi()` 懒加载 |
-| better-sqlite3 报错 | Electron ABI 不匹配 | `postinstall`: `electron-rebuild -f -w better-sqlite3` |
+| better-sqlite3 报错 | Electron ABI 不匹配 | `postinstall`: `electron-builder install-app-deps` |
 | 关闭后登录丢失 | taskkill 强杀 | 优雅关闭 + `--restore-last-session` |
 
 ## 启动方式（pnpm）
