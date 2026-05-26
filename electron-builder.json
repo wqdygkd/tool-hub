@@ -1,6 +1,18 @@
 {
   "appId": "com.toolhub.app",
   "productName": "Tool Hub",
+  "asar": true,
+  "asarUnpack": [
+    "**/*.node",
+    "**/better-sqlite3/**"
+  ],
+  "electronFuses": {
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true,
+    "runAsNode": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false
+  },
   "directories": {
     "output": "release"
   },
