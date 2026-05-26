@@ -9,7 +9,7 @@
     "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron . --remote-debugging-port=0\"",
     "build": "vite build",
     "start": "electron . --remote-debugging-port=0",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps",
     "pack": "pnpm run build && electron-builder --dir",
     "dist": "pnpm run build && electron-builder"
   },
@@ -44,7 +44,6 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.4",
     "@vitejs/plugin-vue": "^6.0.7",
     "concurrently": "^9.1.0",
     "cross-env": "^10.1.0",
