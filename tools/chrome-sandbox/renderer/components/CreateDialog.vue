@@ -6,7 +6,7 @@
       </el-form-item>
       <el-form-item label="继承扩展">
         <el-switch v-model="form.inheritExtensions" />
-        <span class="form-hint">开启后从默认 Chrome 复制已安装扩展（较慢、占用更多磁盘）</span>
+        <span class="form-hint">开启后从系统 Chrome 复制已安装扩展（较慢、占用更多磁盘）</span>
       </el-form-item>
       <el-form-item label="启动参数">
         <LaunchOptionsFields :form="form" />

@@ -14,9 +14,6 @@
       <el-form-item label="关闭时保留数据">
         <el-switch v-model="form.preserveDataOnClose" />
       </el-form-item>
-      <el-form-item label="显示内存占用">
-        <el-switch v-model="form.showMemoryUsage" />
-      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="detectChrome">检测 Chrome</el-button>
@@ -41,7 +38,6 @@ const form = reactive({
   dataDirectory: '',
   autoRestoreOnStartup: false,
   preserveDataOnClose: true,
-  showMemoryUsage: true,
 });
 const visible = useDialogVisible(props, emit);
 const channels = ipcChannels();

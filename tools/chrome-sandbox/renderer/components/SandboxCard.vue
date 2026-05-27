@@ -1,9 +1,8 @@
 <template>
-  <div class="sandbox-card" :class="{ active, default: isDefault }" @click="$emit('click')">
+  <div class="sandbox-card" :class="{ active }" @click="$emit('click')">
     <div class="card-header">
       <span class="color-dot" :style="{ background: sandbox.color }" />
       <span class="name">{{ sandbox.name }}</span>
-      <el-tag v-if="isDefault" size="small" type="warning" effect="plain">默认</el-tag>
     </div>
     <div class="card-meta">
       <span class="status" :class="sandbox.status">{{ formatSandboxStatus(sandbox.status) }}</span>
@@ -25,7 +24,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
+import { formatSandboxStatus } from '../shared/sandbox.js';
 
 const props = defineProps({
   sandbox: { type: Object, required: true },
@@ -34,8 +33,6 @@ const props = defineProps({
 
 defineEmits(['click']);
 
-const isDefault = computed(() => isDefaultSandbox(props.sandbox));
-
 const hasLaunchOptions = computed(() => {
   const opts = props.sandbox.metadata?.launchOptions;
   return opts && (opts.disableSafetyChecks || opts.disableCors || opts.customArgs);
@@ -43,11 +40,6 @@ const hasLaunchOptions = computed(() => {
 </script>
 
 <style scoped>
-.sandbox-card.default {
-  border-color: #f3d19e;
-  background: #fdf6ec;
-}
-
 .card-header {
   display: flex;
   align-items: center;

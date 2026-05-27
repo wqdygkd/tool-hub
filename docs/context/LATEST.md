@@ -10,9 +10,9 @@ packageManager: pnpm
 
 ## 正在做什么
 
-**SessionBox** — 多沙箱 Chrome 管理桌面应用（Electron + Vue 3）。每个隔离沙箱有独立 `user-data-dir` + 指纹伪造扩展；另支持 **默认 Chrome 实例**，直接使用系统已有 Profile（登录、书签、插件均保留）。
+**SessionBox / Chrome 沙箱** — 多沙箱 Chrome 管理桌面应用（Electron + Vue 3）。每个隔离沙箱有独立 `user-data-dir` + 指纹伪造扩展；创建时可从**系统 Chrome Profile** 克隆书签、密码、扩展等。
 
-当前进度：核心功能与代码精简已完成，默认 Chrome 实例已接通，preload IPC 问题已修复。**包管理器使用 pnpm**（勿用 npm）。
+当前进度：已移除「默认 Chrome」虚拟实例；所有沙箱均为隔离目录。**包管理器使用 pnpm**（勿用 npm）。
 
 ## 技术栈
 
@@ -43,13 +43,12 @@ data/config.db
 - **IPC**：`window.sessionbox` 由 preload 暴露；`invokeIpc` / `onIpc` / `ipcChannels()` 封装调用。
 - **Preload 限制**：Electron 33 将 preload 打进 sandbox bundle，**不能** `require` 任何本地文件；`IPC_CHANNELS` 必须内联在 `electron/preload.cjs`，与 `src/ipc/channels.js` 手动同步。
 - **共享常量**：渲染进程通过 Vite 别名 `@shared` → `src/` 引用 `constants/sandbox.js`（已删除 `renderer/composables/useSandbox.js`）。
-- **默认实例**（`sandbox_default`）：指向 `getChromeUserDataRoot()`，不克隆、不注入指纹扩展、不可删除。
+- **Profile 克隆源**：`getDefaultChromeProfilePath()` / `getChromeUserDataRoot()` 仅用于新建沙箱时从系统 Chrome 复制数据，不作为沙箱 `user-data-dir`。
 
 ## 已做功能
 
 - [x] 沙箱 CRUD、Profile 克隆、指纹伪造、插件管理
 - [x] 优雅关闭 Chrome + session 恢复
-- [x] 默认 Chrome 实例（系统 Profile）
 - [x] 代码精简（扩展同步/聚焦逻辑提取、useDialogVisible、path-helper 合并等）
 
 ## 已修复问题（勿重复踩坑）
@@ -80,20 +79,16 @@ pnpm dist         # 本地打包
 
 ## 待办
 
-1. 默认实例与桌面 Chrome 并存时的 Profile 锁提示
-2. 支持多 Chrome Profile 选择
+1. 系统 Chrome 与沙箱同时运行时的 Profile 锁提示
+2. 支持多 Chrome Profile 选择作为克隆源
 3. 首次 commit + `pnpm dist` 打包验证
 4. 新增 IPC 通道时同步更新 `preload.cjs` 与 `src/ipc/channels.js`
 
 ## 关键代码入口
 
 ```js
-// 默认实例判断（前后端共用）
-import { isDefaultSandbox, DEFAULT_SANDBOX_ID } from '@shared/constants/sandbox.js'; // 渲染端
-import { isDefaultSandbox } from '../constants/sandbox.js'; // 主进程
-
 // 前端 IPC
-import { invokeIpc, ipcChannels, onIpc } from './composables/useIpc.js';
+import { invokeIpc, ipcChannels, onIpc } from '@renderer/shared/composables/useIpc.js';
 ```
 
 ## 对话恢复提示

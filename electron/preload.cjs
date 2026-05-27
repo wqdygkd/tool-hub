@@ -18,7 +18,6 @@ const IPC_CHANNELS = {
   CONFIG_SELECT_DATA_DIRECTORY: 'config:select-data-directory',
   EVENT_STATUS_CHANGED: 'sandbox:status-changed',
   EVENT_PROCESS_EXITED: 'sandbox:process-exited',
-  EVENT_MEMORY_UPDATE: 'sandbox:memory-update',
 };
 
 const CDP_IPC_CHANNELS = {

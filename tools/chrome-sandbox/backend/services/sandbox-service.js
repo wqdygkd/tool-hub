@@ -11,52 +11,23 @@ import { killProcess, isRunning, queryChromeSandboxProcesses, onProcessExit, fin
 import { focusChromeWindow } from '../chrome/window-controller.js';
 import {
   getSandboxPath,
-  getSandboxProfilePath,
   getSandboxProfileDirectoryName,
   getSandboxFingerprintExtPath,
-  getChromeUserDataRoot,
   getDefaultChromeProfilePath,
 } from '../utils/path-helper.js';
 import { removeIfExists } from '../utils/file-ops.js';
 import { logger } from '../utils/logger.js';
-import { DEFAULT_SANDBOX_ID, isDefaultSandbox, SANDBOX_COLORS } from '../constants/sandbox.js';
+import { SANDBOX_COLORS } from '../constants/sandbox.js';
 import { IPC_CHANNELS } from '../ipc/channels.js';
 
 let statusEmitter = null;
-let memoryPollTimer = null;
-let memoryPollRunning = false;
-
-const MEMORY_POLL_INTERVAL_MS = 10000;
 
 export function setStatusEmitter(emitter) {
   statusEmitter = emitter;
   onProcessExit((sandboxId) => {
     emit(IPC_CHANNELS.EVENT_PROCESS_EXITED, { sandboxId });
-    sandboxStore.update(sandboxId, { status: 'stopped', chromePid: null, memoryUsage: 0 });
+    sandboxStore.update(sandboxId, { status: 'stopped', chromePid: null });
   });
-  startMemoryPolling();
-}
-
-function startMemoryPolling() {
-  if (memoryPollTimer) clearInterval(memoryPollTimer);
-  memoryPollTimer = setInterval(async () => {
-    if (memoryPollRunning) return;
-    memoryPollRunning = true;
-    try {
-      await pollRunningSandboxMemory();
-    } catch (error) {
-      logger.warn('Memory poll failed', { error: error.message });
-    } finally {
-      memoryPollRunning = false;
-    }
-  }, MEMORY_POLL_INTERVAL_MS);
-}
-
-async function pollRunningSandboxMemory() {
-  for (const sandbox of sandboxStore.getAll()) {
-    if (sandbox.status !== 'running') continue;
-    await refreshSandboxMemory(sandbox.id);
-  }
 }
 
 function emit(channel, payload) {
@@ -72,75 +43,40 @@ function syncRunningState(sandbox) {
 
   const newStatus = running ? 'running' : 'stopped';
   if (!running) emit(IPC_CHANNELS.EVENT_PROCESS_EXITED, { sandboxId: sandbox.id });
-  return sandboxStore.update(sandbox.id, { status: newStatus, chromePid: running ? sandbox.chromePid : null, memoryUsage: running ? sandbox.memoryUsage : 0 });
-}
-
-async function ensureDefaultSandbox() {
-  const userDataPath = getChromeUserDataRoot();
-  const existing = sandboxStore.getById(DEFAULT_SANDBOX_ID);
-
-  const sandboxData = {
-    id: DEFAULT_SANDBOX_ID,
-    name: '默认 Chrome',
-    category: 'other',
-    color: SANDBOX_COLORS.defaultInstance,
-    userDataPath,
-    fingerprintId: null,
-    metadata: { isDefault: true },
-  };
-
-  const sandbox = existing
-    ? sandboxStore.update(DEFAULT_SANDBOX_ID, { userDataPath, metadata: { isDefault: true } })
-    : sandboxStore.create(sandboxData);
-
-  if (!existing) logger.info('Default Chrome sandbox registered', { userDataPath });
-  return sandbox;
-}
-
-function sortSandboxes(list) {
-  return [...list].sort((a, b) => {
-    if (isDefaultSandbox(a)) return -1;
-    if (isDefaultSandbox(b)) return 1;
-    return 0;
+  return sandboxStore.update(sandbox.id, {
+    status: newStatus,
+    chromePid: running ? sandbox.chromePid : null,
   });
+}
+
+async function refreshSandboxPid(sandboxId) {
+  const sandbox = sandboxStore.getById(sandboxId);
+  if (!sandbox) return null;
+
+  const { pids } = await queryChromeSandboxProcesses(sandbox.userDataPath);
+  const pid = pids[0] || sandbox.chromePid;
+  if (!pid || pid === sandbox.chromePid) return sandbox;
+
+  return sandboxStore.update(sandboxId, { chromePid: pid });
 }
 
 async function focusRunningSandbox(sandbox) {
   const pid = findRunningPid(sandbox.id, sandbox.userDataPath) || sandbox.chromePid;
   if (!pid) return null;
   await focusChromeWindow(pid);
-  sandboxStore.update(sandbox.id, {
+  return sandboxStore.update(sandbox.id, {
     status: 'running',
     chromePid: pid,
     lastActiveAt: new Date().toISOString(),
   });
-  return await refreshSandboxMemory(sandbox.id);
-}
-
-async function refreshSandboxMemory(sandboxId) {
-  const sandbox = sandboxStore.getById(sandboxId);
-  if (!sandbox) return null;
-
-  const { pids, memoryMb } = await queryChromeSandboxProcesses(sandbox.userDataPath);
-  const pid = pids[0] || sandbox.chromePid;
-  const updated = sandboxStore.update(sandboxId, {
-    memoryUsage: memoryMb,
-    chromePid: pid || sandbox.chromePid,
-  });
-  emit(IPC_CHANNELS.EVENT_MEMORY_UPDATE, { sandboxId, memoryUsage: memoryMb });
-  return updated;
 }
 
 export const sandboxService = {
   async getAll() {
-    await ensureDefaultSandbox();
-    return sortSandboxes(sandboxStore.getAll().map(syncRunningState));
+    return sandboxStore.getAll().map(syncRunningState);
   },
 
   async getById(id) {
-    if (id === DEFAULT_SANDBOX_ID) {
-      await ensureDefaultSandbox();
-    }
     const sandbox = sandboxStore.getById(id);
     return sandbox ? syncRunningState(sandbox) : null;
   },
@@ -148,7 +84,6 @@ export const sandboxService = {
   async create({ name, fingerprintData = null, inheritExtensions = false, launchOptions = {} }) {
     const sandboxId = `sandbox_${uuidv4().replace(/-/g, '').slice(0, 8)}`;
     const sandboxPath = getSandboxPath(sandboxId);
-    const profilePath = getSandboxProfilePath(sandboxId);
     const fingerprintExtPath = getSandboxFingerprintExtPath(sandboxId);
 
     await fs.ensureDir(sandboxPath);
@@ -183,16 +118,12 @@ export const sandboxService = {
     let sandbox = await this.getById(sandboxId);
     if (!sandbox) throw new Error('沙箱不存在');
 
-    const defaultInstance = isDefaultSandbox(sandbox);
-
     if (sandbox.status === 'running' && isRunning(sandboxId, sandbox.userDataPath)) {
       return focusRunningSandbox(sandbox);
     }
 
-    if (!defaultInstance) {
-      const inheritExtensions = Boolean(sandbox.metadata?.inheritExtensions);
-      await repairSandboxProfile(sandbox.userDataPath, undefined, { inheritExtensions });
-    }
+    const inheritExtensions = Boolean(sandbox.metadata?.inheritExtensions);
+    await repairSandboxProfile(sandbox.userDataPath, undefined, { inheritExtensions });
 
     const focused = await focusRunningSandbox(sandbox);
     if (focused) return focused;
@@ -201,16 +132,16 @@ export const sandboxService = {
     const windowSize = { width: 1280, height: 800 };
 
     let metadata = sandbox.metadata;
-    if (!defaultInstance && !metadata?.developerModeEnabled && await shouldSkipDeveloperModeSetup(sandbox)) {
+    if (!metadata?.developerModeEnabled && await shouldSkipDeveloperModeSetup(sandbox)) {
       metadata = { ...(metadata || {}), developerModeEnabled: true };
     }
 
     const { pid, debugPort } = await launchChrome({
       sandboxId,
       userDataDir: sandbox.userDataPath,
-      profileDirectory: defaultInstance ? 'Default' : getSandboxProfileDirectoryName(sandboxId),
-      extensionPath: defaultInstance ? null : getSandboxFingerprintExtPath(sandboxId),
-      enableDeveloperMode: !defaultInstance && !metadata?.developerModeEnabled,
+      profileDirectory: getSandboxProfileDirectoryName(sandboxId),
+      extensionPath: getSandboxFingerprintExtPath(sandboxId),
+      enableDeveloperMode: !metadata?.developerModeEnabled,
       windowPosition,
       windowSize,
       launchOptions: metadata?.launchOptions || {},
@@ -234,7 +165,7 @@ export const sandboxService = {
     });
 
     emit(IPC_CHANNELS.EVENT_STATUS_CHANGED, { sandboxId, status: 'running' });
-    return await refreshSandboxMemory(sandboxId);
+    return (await refreshSandboxPid(sandboxId)) || sandbox;
   },
 
   async close(sandboxId) {
@@ -245,7 +176,6 @@ export const sandboxService = {
     const updated = sandboxStore.update(sandboxId, {
       status: 'stopped',
       chromePid: null,
-      memoryUsage: 0,
     });
 
     emit(IPC_CHANNELS.EVENT_STATUS_CHANGED, { sandboxId, status: 'stopped' });
@@ -256,40 +186,30 @@ export const sandboxService = {
     const sandbox = await this.getById(sandboxId);
     if (!sandbox) throw new Error('沙箱不存在');
 
-    if (isDefaultSandbox(sandbox)) {
-      throw new Error('默认 Chrome 实例不能删除');
-    }
-
     if (sandbox.status === 'running') {
       await this.close(sandboxId);
     }
 
     await removeIfExists(sandbox.userDataPath);
+    fingerprintStore.delete(sandbox.fingerprintId);
     sandboxStore.delete(sandboxId);
     logger.info('Sandbox deleted', { sandboxId });
     return true;
   },
 
   update(sandboxId, data) {
-    const sandbox = sandboxStore.getById(sandboxId);
-    if (sandbox && isDefaultSandbox(sandbox) && data.name === '') {
-      throw new Error('默认实例名称不能为空');
-    }
     return sandboxStore.update(sandboxId, data);
   },
 
   async refreshStatus(sandboxId) {
     if (!sandboxStore.getById(sandboxId)) throw new Error('沙箱不存在');
-    return refreshSandboxMemory(sandboxId);
+    return refreshSandboxPid(sandboxId);
   },
 };
 
 export async function updateSandboxFingerprint(sandboxId, fingerprintData) {
   const sandbox = sandboxStore.getById(sandboxId);
   if (!sandbox) throw new Error('沙箱不存在');
-  if (isDefaultSandbox(sandbox)) {
-    throw new Error('默认 Chrome 实例不支持指纹伪造');
-  }
 
   fingerprintStore.update(sandbox.fingerprintId, fingerprintData);
   await updateFingerprintConfig(getSandboxFingerprintExtPath(sandboxId), fingerprintData);

@@ -7,7 +7,6 @@ const DEFAULTS = {
   dataDirectory: getDefaultDataDirectory(),
   autoRestoreOnStartup: false,
   preserveDataOnClose: true,
-  showMemoryUsage: true,
 };
 
 export const configStore = {

@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS sandboxes (
     chrome_pid INTEGER,
     status TEXT DEFAULT 'stopped',
     fingerprint_id TEXT,
-    memory_usage INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_used_at DATETIME,
     last_active_at DATETIME,

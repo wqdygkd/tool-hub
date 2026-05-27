@@ -1,6 +1,5 @@
 import { spawn, execSync, execFile, execFileSync } from 'child_process';
 import { promisify } from 'util';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { logger } from '../utils/logger.js';
@@ -9,7 +8,7 @@ const execFileAsync = promisify(execFile);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WINDOWS_QUERY_SCRIPT = path.join(__dirname, 'chrome-process-query.ps1');
-const EMPTY_SNAPSHOT = Object.freeze({ pids: [], memoryMb: 0 });
+const EMPTY_SNAPSHOT = Object.freeze({ pids: [] });
 const QUERY_CACHE_MS = 8000;
 
 const processes = new Map();
@@ -34,11 +33,7 @@ function logWindowsQueryFailure(userDataDir, error) {
 }
 
 function buildUnixSnapshot(userDataDir) {
-  const pids = findUnixPidsByUserDataDir(userDataDir);
-  return {
-    pids,
-    memoryMb: pids.reduce((total, pid) => total + getMemoryUsage(pid), 0),
-  };
+  return { pids: findUnixPidsByUserDataDir(userDataDir) };
 }
 
 function queryWindowsChromeSync(userDataDir) {
@@ -69,7 +64,6 @@ function parseQueryOutput(output) {
   const pids = Array.isArray(parsed.pids) ? parsed.pids : [parsed.pids].filter(Boolean);
   return {
     pids: pids.map((pid) => Number(pid)).filter(Number.isFinite),
-    memoryMb: Number.isFinite(Number(parsed.memoryMb)) ? Number(parsed.memoryMb) : 0,
   };
 }
 
@@ -291,29 +285,4 @@ export async function killProcess(sandboxId, userDataDir) {
     logger.error('Failed to kill Chrome process', { sandboxId, error: error.message });
     return false;
   }
-}
-
-export function getMemoryUsage(pid) {
-  if (!pid) return 0;
-
-  try {
-    if (process.platform === 'win32') {
-      const output = execSync(
-        `powershell -NoProfile -Command "(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).WorkingSet64 / 1MB"`,
-        { encoding: 'utf8' },
-      ).trim();
-      const value = parseFloat(output);
-      return Number.isFinite(value) ? Math.round(value) : 0;
-    }
-
-    const stat = fs.readFileSync(`/proc/${pid}/statm`, 'utf8');
-    const pages = parseInt(stat.split(' ')[1], 10);
-    return Math.round((pages * 4096) / (1024 * 1024));
-  } catch {
-    return 0;
-  }
-}
-
-export function getSandboxMemoryUsage(userDataDir) {
-  return getChromeSandboxSnapshotSync(userDataDir).memoryMb;
 }

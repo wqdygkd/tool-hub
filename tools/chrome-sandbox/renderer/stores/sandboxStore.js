@@ -61,11 +61,6 @@ export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
     fingerprint.value = await invokeIpc(ipcChannels().FINGERPRINT_GET_BY_ID, sandbox.fingerprintId);
   }
 
-  function patchMemory(sandboxId, memoryUsage) {
-    const sandbox = findSandbox(sandboxId);
-    if (sandbox) sandbox.memoryUsage = memoryUsage;
-  }
-
   return {
     sandboxes,
     selectedId,
@@ -79,6 +74,5 @@ export const useSandboxStore = defineStore('chrome-sandbox/sandbox', () => {
     remove,
     update,
     loadFingerprint,
-    patchMemory,
   };
 });

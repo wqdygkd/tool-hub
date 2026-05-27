@@ -5,6 +5,9 @@ import { copyIfExists, ensureDir, readJsonFile, removeIfExists, writeJsonFile } 
 import { logger } from '../utils/logger.js';
 
 const PROFILE_ITEMS_CORE = ['Bookmarks', 'Preferences'];
+/** Chrome 已保存密码（及账号同步密码）对应的 SQLite 库名 */
+const PROFILE_PASSWORD_DATABASES = ['Login Data', 'Login Data For Account'];
+const SQLITE_SIDECAR_SUFFIXES = ['', '-journal', '-wal', '-shm'];
 const PROFILE_ITEM_SECURE_PREFS = 'Secure Preferences';
 const EXTENSION_STATE_ITEMS = ['Extension State', 'Local Extension Settings', 'Extension Scripts', 'Extension Rules'];
 const EXTENSION_ASSET_ITEMS = ['Extensions', ...EXTENSION_STATE_ITEMS];
@@ -14,6 +17,20 @@ function getCloneItems(inheritExtensions) {
   return inheritExtensions
     ? [...PROFILE_ITEMS_CORE, PROFILE_ITEM_SECURE_PREFS, ...EXTENSION_ASSET_ITEMS]
     : PROFILE_ITEMS_CORE;
+}
+
+async function copyProfilePasswordStores(sourceProfilePath, targetProfilePath) {
+  for (const dbName of PROFILE_PASSWORD_DATABASES) {
+    for (const suffix of SQLITE_SIDECAR_SUFFIXES) {
+      const item = `${dbName}${suffix}`;
+      const src = path.join(sourceProfilePath, item);
+      const dest = path.join(targetProfilePath, item);
+      const copied = await copyIfExists(src, dest);
+      if (copied) {
+        logger.info('Profile password store item', { item, src, dest });
+      }
+    }
+  }
 }
 
 async function removeExtensionProfileData(profilePath) {
@@ -36,6 +53,8 @@ export async function cloneProfile(
     const copied = await copyIfExists(src, dest);
     logger.info('Profile clone item', { item, copied, inheritExtensions, src, dest });
   }
+
+  await copyProfilePasswordStores(sourceProfilePath, targetProfilePath);
 
   await patchPreferences(targetProfilePath, { inheritExtensions });
   if (!inheritExtensions) {
@@ -66,6 +85,11 @@ export async function repairSandboxProfile(
   const profileDirName = getSandboxProfileDirectoryName(sandboxId);
   const profilePath = await ensureSandboxProfilePath(sandboxPath, profileDirName);
   await ensureDir(profilePath);
+
+  const loginDataPath = path.join(profilePath, 'Login Data');
+  if (!await fs.pathExists(loginDataPath)) {
+    await copyProfilePasswordStores(sourceProfilePath, profilePath);
+  }
 
   if (inheritExtensions) {
     for (const item of EXTENSION_STATE_ITEMS) {

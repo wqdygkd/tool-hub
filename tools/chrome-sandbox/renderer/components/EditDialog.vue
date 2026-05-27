@@ -4,7 +4,7 @@
       <el-form-item label="名称">
         <el-input v-model="form.name" placeholder="沙箱名称" />
       </el-form-item>
-      <el-form-item v-if="!isDefault" label="启动参数">
+      <el-form-item label="启动参数">
         <LaunchOptionsFields :form="form" />
       </el-form-item>
     </el-form>
@@ -16,11 +16,10 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import LaunchOptionsFields from './LaunchOptionsFields.vue';
 import { useSandboxStore } from '../stores/sandboxStore.js';
-import { isDefaultSandbox } from '../shared/sandbox.js';
 import {
   LAUNCH_OPTION_FORM_FIELDS,
   buildLaunchOptionsPayload,
@@ -41,7 +40,6 @@ const form = reactive({
   ...LAUNCH_OPTION_FORM_FIELDS,
 });
 const visible = useDialogVisible(props, emit);
-const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 
 watch(visible, (open) => {
   if (open && props.sandbox) {
@@ -70,15 +68,13 @@ async function save() {
 
   loading.value = true;
   try {
-    const payload = { name };
-    if (!isDefault.value) {
-      payload.metadata = {
+    await store.update(props.sandbox.id, {
+      name,
+      metadata: {
         ...(props.sandbox.metadata || {}),
         launchOptions: buildLaunchOptionsPayload(form),
-      };
-    }
-
-    await store.update(props.sandbox.id, payload);
+      },
+    });
     ElMessage.success('设置已保存');
     visible.value = false;
     reset();

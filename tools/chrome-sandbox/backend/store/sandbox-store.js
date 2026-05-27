@@ -9,7 +9,6 @@ const FIELD_MAP = {
   chromePid: 'chrome_pid',
   status: 'status',
   fingerprintId: 'fingerprint_id',
-  memoryUsage: 'memory_usage',
   lastUsedAt: 'last_used_at',
   lastActiveAt: 'last_active_at',
 };
@@ -25,7 +24,6 @@ function mapRow(row) {
     chromePid: row.chrome_pid,
     status: row.status,
     fingerprintId: row.fingerprint_id,
-    memoryUsage: row.memory_usage,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     lastActiveAt: row.last_active_at,

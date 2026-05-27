@@ -13,7 +13,7 @@ function Get-ChromeProcessTree {
   $escaped = [regex]::Escape($TargetUserDataDir)
   $all = @(Get-CimInstance Win32_Process -Filter "Name='chrome.exe'")
   if ($all.Count -eq 0) {
-    return @{ pids = @(); memoryMb = 0 }
+    return @{ pids = @() }
   }
 
   $byPid = @{}
@@ -29,7 +29,7 @@ function Get-ChromeProcessTree {
 
   $matched = @($all | Where-Object { $_.CommandLine -and ($_.CommandLine -match $escaped) })
   if ($matched.Count -eq 0) {
-    return @{ pids = @(); memoryMb = 0 }
+    return @{ pids = @() }
   }
 
   $roots = New-Object System.Collections.Generic.List[object]
@@ -72,12 +72,8 @@ function Get-ChromeProcessTree {
     }
   }
 
-  $memoryBytes = ($tree | Measure-Object -Property WorkingSetSize -Sum).Sum
-  if (-not $memoryBytes) { $memoryBytes = 0 }
-
   @{
     pids = @($tree | ForEach-Object { $_.ProcessId })
-    memoryMb = [int][math]::Round($memoryBytes / 1MB)
   }
 }
 

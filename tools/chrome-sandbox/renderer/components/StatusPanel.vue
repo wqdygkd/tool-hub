@@ -3,7 +3,6 @@
     <template v-if="sandbox">
       <ActionBar
         :running="sandbox.status === 'running'"
-        :is-default="isDefault"
         @activate="$emit('activate')"
         @close="$emit('close')"
         @delete="$emit('delete')"
@@ -18,30 +17,47 @@
 
       <div class="panel-header">
         <h2>{{ sandbox.name }}</h2>
-        <el-tag v-if="isDefault" type="warning" size="small">默认实例</el-tag>
         <el-tag :type="sandbox.status === 'running' ? 'success' : 'info'" size="small">
           {{ formatSandboxStatus(sandbox.status) }}
         </el-tag>
       </div>
 
-      <el-alert
-        v-if="isDefault"
-        type="info"
-        :closable="false"
-        show-icon
-        title="使用系统 Chrome 用户数据"
-        description="直接打开您日常使用的 Chrome Profile，保留登录状态、书签、历史记录和已安装插件，不会注入指纹伪造扩展。"
-        class="default-alert"
-      />
-
       <div class="detail-grid">
-        <div class="detail-item"><span>状态</span><strong>{{ sandbox.status }}</strong></div>
         <div class="detail-item"><span>PID</span><strong>{{ sandbox.chromePid || '-' }}</strong></div>
-        <div class="detail-item"><span>内存</span><strong>{{ sandbox.memoryUsage || 0 }} MB</strong></div>
         <div class="detail-item"><span>路径</span><strong class="path">{{ sandbox.userDataPath }}</strong></div>
       </div>
 
-      <div v-if="!isDefault" class="section-block">
+      <div class="section-block">
+        <h3>沙箱配置</h3>
+        <div class="sandbox-config">
+          <div class="config-row">
+            <span class="config-label">继承扩展</span>
+            <div class="config-value">
+              <el-tag :type="inheritExtensions ? 'success' : 'info'" size="small" effect="plain">
+                {{ inheritExtensions ? '已开启' : '未开启' }}
+              </el-tag>
+            </div>
+          </div>
+          <div class="config-row">
+            <span class="config-label">启动参数</span>
+            <div v-if="hasLaunchOptions" class="config-value launch-options-display">
+              <el-tag v-if="sandbox.metadata?.launchOptions?.disableSafetyChecks" size="small" type="danger" effect="plain">
+                禁用安全检查
+              </el-tag>
+              <el-tag v-if="sandbox.metadata?.launchOptions?.disableCors" size="small" type="danger" effect="plain">
+                禁用 CORS
+              </el-tag>
+              <div v-if="sandbox.metadata?.launchOptions?.customArgs" class="custom-args">
+                <span class="label">自定义:</span>
+                <code>{{ sandbox.metadata.launchOptions.customArgs }}</code>
+              </div>
+            </div>
+            <span v-else class="config-value muted">无</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block">
         <h3>指纹状态</h3>
         <div v-if="fingerprint" class="fingerprint-summary">
           <p>UA: {{ fingerprint.navigator?.userAgent?.slice(0, 60) }}...</p>
@@ -49,22 +65,6 @@
           <p>Canvas: {{ fingerprint.canvas?.noiseLevel }} | WebGL: {{ fingerprint.webgl?.vendor }}</p>
         </div>
         <p v-else class="muted">暂无指纹信息</p>
-      </div>
-
-      <div v-if="showLaunchOptions" class="section-block">
-        <h3>启动参数</h3>
-        <div class="launch-options-display">
-          <el-tag v-if="sandbox.metadata?.launchOptions?.disableSafetyChecks" size="small" type="danger" effect="plain">
-            禁用安全检查
-          </el-tag>
-          <el-tag v-if="sandbox.metadata?.launchOptions?.disableCors" size="small" type="danger" effect="plain">
-            禁用 CORS
-          </el-tag>
-          <div v-if="sandbox.metadata?.launchOptions?.customArgs" class="custom-args">
-            <span class="label">自定义参数:</span>
-            <code>{{ sandbox.metadata?.launchOptions?.customArgs }}</code>
-          </div>
-        </div>
       </div>
     </template>
 
@@ -78,8 +78,8 @@
 import { ref, computed } from 'vue';
 import ActionBar from './ActionBar.vue';
 import EditDialog from './EditDialog.vue';
-import { isDefaultSandbox, formatSandboxStatus } from '../shared/sandbox.js';
-import { hasLaunchOptions } from '../shared/launchOptions.js';
+import { formatSandboxStatus } from '../shared/sandbox.js';
+import { hasLaunchOptions as hasLaunchOptionsEnabled } from '../shared/launchOptions.js';
 
 const props = defineProps({
   sandbox: { type: Object, default: null },
@@ -88,25 +88,52 @@ const props = defineProps({
 
 defineEmits(['activate', 'close', 'delete', 'edit-fingerprint']);
 
-const isDefault = computed(() => isDefaultSandbox(props.sandbox));
 const editSettingsVisible = ref(false);
 
-const showLaunchOptions = computed(() => hasLaunchOptions(props.sandbox?.metadata));
+const inheritExtensions = computed(() => Boolean(props.sandbox?.metadata?.inheritExtensions));
+const hasLaunchOptions = computed(() => hasLaunchOptionsEnabled(props.sandbox?.metadata));
 </script>
 
 <style scoped>
-.default-alert {
-  margin-bottom: var(--spacing-lg);
+.sandbox-config {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.config-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: start;
+}
+
+.config-label {
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--el-text-color-secondary);
+}
+
+.config-value {
+  min-width: 0;
+  line-height: 22px;
+}
+
+.config-value :deep(.el-tag) {
+  width: fit-content;
+  max-width: 100%;
 }
 
 .launch-options-display {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .custom-args {
   display: flex;
+  flex-basis: 100%;
   gap: 8px;
   align-items: baseline;
 }

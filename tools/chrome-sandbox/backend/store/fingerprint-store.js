@@ -101,4 +101,9 @@ export const fingerprintStore = {
     `).run({ id, ...buildParams(data) });
     return this.getById(id);
   },
+
+  delete(id) {
+    if (!id) return;
+    getDatabase().prepare('DELETE FROM fingerprints WHERE id = ?').run(id);
+  },
 };

@@ -190,10 +190,12 @@ export function getExtensionTemplatePath() {
     : path.join(process.resourcesPath, 'extension');
 }
 
+/** 系统 Chrome 默认 Profile 目录，仅作新建/修复沙箱时的克隆源 */
 export function getDefaultChromeProfilePath() {
   return getChromePaths().defaultProfile;
 }
 
+/** 系统 Chrome User Data 根目录，仅作克隆 Local State 等，不作为沙箱 user-data-dir */
 export function getChromeUserDataRoot() {
   return getChromePaths().userDataRoot;
 }

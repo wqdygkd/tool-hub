@@ -47,7 +47,6 @@ import SettingsDialog from '../components/SettingsDialog.vue';
 import FingerprintEditor from '../components/FingerprintEditor.vue';
 import DataDirectorySetupDialog from '../components/DataDirectorySetupDialog.vue';
 import { useSandboxStore } from '../stores/sandboxStore.js';
-import { isDefaultSandbox } from '../shared/sandbox.js';
 import { invokeIpc, ipcChannels, onIpc } from '@renderer/shared/composables/useIpc.js';
 
 const { goToHome } = useNavigation();
@@ -60,10 +59,6 @@ const showSetup = ref(false);
 const channels = ipcChannels();
 
 function openFingerprintEditor() {
-  if (isDefaultSandbox(store.selectedSandbox)) {
-    ElMessage.warning('默认 Chrome 实例不支持指纹伪造');
-    return;
-  }
   showFingerprint.value = true;
 }
 
@@ -87,9 +82,6 @@ async function initPage() {
   unsubscribers.push(
     onIpc(channels.EVENT_STATUS_CHANGED, () => store.loadAll()),
     onIpc(channels.EVENT_PROCESS_EXITED, () => store.loadAll()),
-    onIpc(channels.EVENT_MEMORY_UPDATE, ({ sandboxId, memoryUsage }) => {
-      store.patchMemory(sandboxId, memoryUsage);
-    }),
   );
   ready.value = true;
 }

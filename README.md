@@ -56,8 +56,7 @@ project/
 
 ## Chrome沙箱 工具功能
 
-- 独立 Chrome Profile 沙箱管理
-- 默认 Chrome 实例（使用系统 Profile）
+- 独立 Chrome Profile 沙箱管理（从系统 Chrome 可选继承书签、密码、扩展）
 - 指纹伪造扩展（Canvas / WebGL / Navigator）
 - 沙箱创建、启动、关闭、删除
 - 指纹参数编辑
